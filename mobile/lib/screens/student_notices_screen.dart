@@ -1,0 +1,152 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+
+import '../services/service_locator.dart';
+
+class StudentNoticesScreen extends StatefulWidget {
+  const StudentNoticesScreen({super.key});
+
+  @override
+  State<StudentNoticesScreen> createState() => _StudentNoticesScreenState();
+}
+
+class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
+  bool _loading = true;
+  String? _error;
+  List<_StudentNoticeItem> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await Services.api.post('/api/v1/student/notices/mark-read', {});
+      final res = await Services.api.get('/api/v1/student/notices');
+      if (res.statusCode != 200) {
+        throw Exception('Failed');
+      }
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final notices = (data['notices'] as List<dynamic>)
+          .map((e) => _StudentNoticeItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        _items = notices;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Unable to load notices';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Student Notices')),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? ListView(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(color: Theme.of(context).colorScheme.error),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _items.isEmpty
+                      ? ListView(
+                          children: const [
+                            Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text('No notices available.'),
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(12),
+                          itemBuilder: (context, index) {
+                            final item = _items[index];
+                            return Card(
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(item.body),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      _formatDate(item.createdAt),
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.7),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemCount: _items.length,
+                        ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudentNoticeItem {
+  _StudentNoticeItem({
+    required this.title,
+    required this.body,
+    required this.createdAt,
+  });
+
+  final String title;
+  final String body;
+  final DateTime createdAt;
+
+  factory _StudentNoticeItem.fromJson(Map<String, dynamic> json) {
+    return _StudentNoticeItem(
+      title: json['title'] as String,
+      body: json['body'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+    );
+  }
+}
+
+String _formatDate(DateTime dt) {
+  return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+}
