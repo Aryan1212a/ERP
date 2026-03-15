@@ -1,8 +1,17 @@
-# Python backend
-backend/venv/
+# Track environment for backup
+# backend/venv/
+# backend/.env
+
+# Python cache
 backend/__pycache__/
 backend/**/*.pyc
-backend/.env
+.pytest_cache/
+
+# Build/cache artifacts
+backend/build/
+backend/dist/
+mobile/build/
+mobile/.dart_tool/
 
 # General
 .DS_Store
