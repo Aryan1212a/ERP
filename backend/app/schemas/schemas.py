@@ -21,6 +21,7 @@ class UserOut(BaseModel):
     email: EmailStr
     full_name: str
     role: str
+    is_active: bool = True
     class_id: int | None = None
     username: str | None = None
     must_change_password: bool | None = None
@@ -58,6 +59,34 @@ class AdminResetPasswordOut(BaseModel):
     temporary_password: str
     must_change_password: bool
 
+class AdminUpdateUserIn(BaseModel):
+    full_name: str
+    email: EmailStr
+    class_id: int | None = None
+    is_active: bool = True
+
+class AdminTransferUserDataIn(BaseModel):
+    target_user_id: int
+
+class AdminTransferUserDataOut(BaseModel):
+    source_user_id: int
+    target_user_id: int
+    transferred_classes: int
+    transferred_assignments: int
+    transferred_marks: int
+
+class AdminDeleteUserOut(BaseModel):
+    deleted: bool
+    user_id: int
+
+class UserClassAssignmentIn(BaseModel):
+    class_id: int | None = None
+
+class UserClassAssignmentOut(BaseModel):
+    user_id: int
+    class_id: int | None = None
+    role: str
+
 class ChangePasswordIn(BaseModel):
     old_password: str
     new_password: str
@@ -67,10 +96,16 @@ class ChangePasswordOut(BaseModel):
 
 class ClassCreate(BaseModel):
     name: str
+    class_teacher_id: int | None = None
+
+class ClassUpdate(BaseModel):
+    name: str | None = None
+    class_teacher_id: int | None = None
 
 class ClassOut(ClassCreate):
     id: int
     school_id: int
+    class_teacher_name: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 class AttendanceCreate(BaseModel):
@@ -146,6 +181,62 @@ class StudentInsightsOut(BaseModel):
     below_attendance_threshold: list[StudentInsightOut]
     missing_assignments: list[StudentInsightOut]
 
+class TeacherStudentListItemOut(BaseModel):
+    student_id: int
+    full_name: str
+    email: str
+    class_id: int | None = None
+    class_name: str | None = None
+    attendance_pct: float
+    pending_assignments: int
+    average_score: float
+
+class TeacherStudentsOut(BaseModel):
+    students: list[TeacherStudentListItemOut]
+
+class TeacherStudentAttendanceOut(BaseModel):
+    total_records: int
+    present: int
+    absent: int
+    late: int
+    attendance_pct: float
+
+class TeacherStudentAssignmentSummaryOut(BaseModel):
+    pending: int
+    submitted: int
+    late: int
+    missing: int
+
+class TeacherStudentPerformanceSummaryOut(BaseModel):
+    average_score: float
+    by_subject: dict[str, float]
+
+class TeacherStudentMarkItemOut(BaseModel):
+    subject: str
+    assessment_type: str
+    assessment_name: str
+    marks: int
+    max_marks: int
+    percentage: float
+    date: date
+
+class TeacherStudentNoticeItemOut(BaseModel):
+    notice_id: int
+    title: str
+    created_at: datetime
+
+class TeacherStudentDetailOut(BaseModel):
+    student_id: int
+    full_name: str
+    email: str
+    class_id: int | None = None
+    class_name: str | None = None
+    attendance: TeacherStudentAttendanceOut
+    assignments: TeacherStudentAssignmentSummaryOut
+    performance: TeacherStudentPerformanceSummaryOut
+    recent_marks: list[TeacherStudentMarkItemOut]
+    recent_notices: list[TeacherStudentNoticeItemOut]
+
 class TeacherAttendanceRecordIn(BaseModel):
     student_id: int
     status: str
@@ -206,11 +297,15 @@ class MarksRecordIn(BaseModel):
 
 class MarksIn(BaseModel):
     class_id: int
+    subject: str
+    assessment_type: str
     assessment_name: str
     date: date
     records: list[MarksRecordIn]
 
 class MarksOut(BaseModel):
+    subject: str
+    assessment_type: str
     assessment_name: str
     saved: int
     status: str
@@ -239,6 +334,8 @@ class StudentAssignmentsOut(BaseModel):
     assignments: list[StudentAssignmentOut]
 
 class StudentPerformanceItemOut(BaseModel):
+    subject: str
+    assessment_type: str
     assessment_name: str
     marks: int
     max_marks: int

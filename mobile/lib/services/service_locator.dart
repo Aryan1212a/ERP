@@ -3,13 +3,16 @@ import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 
+const String _defaultRemoteBaseUrl =
+    'https://bronzy-undissonantly-madelene.ngrok-free.dev';
+
 String _defaultBaseUrl() {
-  if (kIsWeb) return 'http://127.0.0.1:8000';
+  if (kIsWeb) return _defaultRemoteBaseUrl;
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
-      return 'http://10.0.2.2:8000';
+      return _defaultRemoteBaseUrl;
     default:
-      return 'http://127.0.0.1:8000';
+      return _defaultRemoteBaseUrl;
   }
 }
 

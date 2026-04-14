@@ -60,7 +60,8 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
       'role': _role,
       'full_name': _fullName.text.trim(),
       'email': _email.text.trim(),
-      if (_role == 'student') 'class_id': _selectedClassId,
+      if (_role == 'student' || (_role == 'teacher' && _selectedClassId != null))
+        'class_id': _selectedClassId,
     };
 
     final res = await Services.api.post('/api/v1/admin/users', body);
@@ -71,6 +72,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
       final data = jsonDecode(res.body);
       _showCredentialsDialog(
         context,
+        title: 'User Created',
         username: data['username'],
         tempPassword: data['temporary_password'],
       );
@@ -119,7 +121,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        value: _role,
+                        initialValue: _role,
                         items: const [
                           DropdownMenuItem(value: 'student', child: Text('Student')),
                           DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
@@ -131,7 +133,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (_role == 'student')
+                      if (_role == 'student' || _role == 'teacher')
                         _loadingClasses
                             ? const LinearProgressIndicator()
                             : _error != null
@@ -145,7 +147,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                                     ],
                                   )
                                 : DropdownButtonFormField<int>(
-                                    value: _selectedClassId,
+                                    initialValue: _selectedClassId,
                                     items: _classes
                                         .map((c) => DropdownMenuItem(
                                               value: c.id,
@@ -153,9 +155,12 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                                             ))
                                         .toList(),
                                     onChanged: (value) => setState(() => _selectedClassId = value),
-                                    decoration: const InputDecoration(
-                                      labelText: 'Class',
-                                      border: OutlineInputBorder(),
+                                    decoration: InputDecoration(
+                                      labelText: _role == 'student' ? 'Class' : 'Assigned Class',
+                                      helperText: _role == 'teacher'
+                                          ? 'Optional: assign the teacher to a class now'
+                                          : null,
+                                      border: const OutlineInputBorder(),
                                     ),
                                     validator: (v) =>
                                         _role == 'student' && v == null ? 'Class required' : null,
@@ -194,11 +199,11 @@ class _ClassItem {
 }
 
 void _showCredentialsDialog(BuildContext context,
-    {required String username, required String tempPassword}) {
+    {required String title, required String username, required String tempPassword}) {
   showDialog(
     context: context,
     builder: (_) => AlertDialog(
-      title: const Text('User Created'),
+      title: Text(title),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

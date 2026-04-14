@@ -24,6 +24,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   Future<void> _load() async {
     final res = await Services.api.get('/api/v1/attendance');
+    if (!mounted) return;
     if (res.statusCode == 200) {
       setState(() {
         _items = jsonDecode(res.body);
@@ -35,14 +36,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Future<void> _add() async {
-    final today = DateTime.now();
-    final res = await Services.api.post('/api/v1/attendance', {
-      'class_id': 1,
-      'student_id': 1,
-      'date': '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}',
-      'status': 'present'
-    });
-    if (res.statusCode == 200) {
+    final created = await Navigator.pushNamed(context, '/attendance/form');
+    if (!mounted) return;
+    if (created == true) {
       _load();
     }
   }
@@ -191,10 +187,10 @@ class _BlurBubble extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(0.18),
+        color: color.withValues(alpha: 0.18),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 60,
             spreadRadius: 10,
           ),
@@ -215,11 +211,11 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withOpacity(0.75),
-        border: Border.all(color: Colors.white.withOpacity(0.4)),
+        color: Colors.white.withValues(alpha: 0.75),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 12),
           ),
@@ -267,7 +263,7 @@ class _Header extends StatelessWidget {
             width: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF0EA5E9).withOpacity(0.12),
+              color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
             ),
             child: const Icon(Icons.fact_check_rounded, color: Color(0xFF0EA5E9)),
           ),
@@ -326,11 +322,11 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: Colors.white.withOpacity(0.8),
-        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        color: Colors.white.withValues(alpha: 0.8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -343,7 +339,7 @@ class _SummaryCard extends StatelessWidget {
             width: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: data.color.withOpacity(0.12),
+              color: data.color.withValues(alpha: 0.12),
             ),
             child: Icon(Icons.circle, size: 16, color: data.color),
           ),
@@ -354,7 +350,7 @@ class _SummaryCard extends StatelessWidget {
                   width: 42,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: data.color.withOpacity(0.1),
+                    color: data.color.withValues(alpha: 0.1),
                   ),
                 )
               : Text(
@@ -420,11 +416,11 @@ class _AttendanceCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withOpacity(0.82),
-        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        color: Colors.white.withValues(alpha: 0.82),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -437,7 +433,7 @@ class _AttendanceCard extends StatelessWidget {
             width: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
             ),
             child: Icon(Icons.person_rounded, color: color),
           ),
@@ -467,7 +463,7 @@ class _AttendanceCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
@@ -495,8 +491,8 @@ class _AttendanceSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withOpacity(0.7),
-        border: Border.all(color: Colors.white.withOpacity(0.4)),
+        color: Colors.white.withValues(alpha: 0.7),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -505,7 +501,7 @@ class _AttendanceSkeleton extends StatelessWidget {
             width: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
             ),
           ),
           const SizedBox(width: 12),
@@ -518,7 +514,7 @@ class _AttendanceSkeleton extends StatelessWidget {
                   width: 140,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -527,7 +523,7 @@ class _AttendanceSkeleton extends StatelessWidget {
                   width: 90,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                   ),
                 ),
               ],
@@ -550,8 +546,8 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withOpacity(0.8),
-        border: Border.all(color: Colors.white.withOpacity(0.4)),
+        color: Colors.white.withValues(alpha: 0.8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,7 +557,7 @@ class _EmptyState extends StatelessWidget {
             width: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF38BDF8).withOpacity(0.15),
+              color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
             ),
             child: const Icon(Icons.fact_check_rounded, color: Color(0xFF38BDF8)),
           ),

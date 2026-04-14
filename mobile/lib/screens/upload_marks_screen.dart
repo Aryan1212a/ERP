@@ -12,20 +12,32 @@ class UploadMarksScreen extends StatefulWidget {
 
 class _UploadMarksScreenState extends State<UploadMarksScreen> {
   final _assessmentName = TextEditingController();
+  final _subject = TextEditingController();
   bool _loading = true;
   bool _submitting = false;
   String? _error;
   DateTime _date = DateTime.now();
   List<_ClassItem> _classes = [];
+  List<_TimetableItem> _timetableItems = [];
   List<_StudentItem> _students = [];
   int? _selectedClassId;
+  String _assessmentType = 'test';
+  List<String> _subjects = [];
   final Map<int, String> _marks = {};
   final Map<int, String> _maxMarks = {};
+  int _studentsRequestId = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _assessmentName.dispose();
+    _subject.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -34,14 +46,22 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
       _error = null;
     });
     try {
-      final res = await Services.api.get('/api/v1/classes');
-      if (res.statusCode != 200) throw Exception('Failed to load classes');
-      final json = jsonDecode(res.body) as List<dynamic>;
+      final responses = await Future.wait([
+        Services.api.get('/api/v1/classes'),
+        Services.api.get('/api/v1/timetable'),
+      ]);
+      if (responses.any((res) => res.statusCode != 200)) throw Exception('Failed to load data');
+      final json = jsonDecode(responses[0].body) as List<dynamic>;
+      final timetableJson = jsonDecode(responses[1].body) as List<dynamic>;
       _classes = json.map((e) => _ClassItem.fromJson(e)).toList();
+      _timetableItems = timetableJson.map((e) => _TimetableItem.fromJson(e as Map<String, dynamic>)).toList();
       _selectedClassId = _classes.isNotEmpty ? _classes.first.id : null;
+      _syncSubjects();
       await _loadStudents();
+      if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Unable to load data';
@@ -50,17 +70,37 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
   }
 
   Future<void> _loadStudents() async {
+    final requestId = ++_studentsRequestId;
     _students = [];
     _marks.clear();
     _maxMarks.clear();
     if (_selectedClassId == null) return;
-    final res = await Services.api.get('/api/v1/students?class_id=$_selectedClassId');
+    final classId = _selectedClassId;
+    final res = await Services.api.get('/api/v1/students?class_id=$classId');
     if (res.statusCode != 200) throw Exception('Failed to load students');
     final json = jsonDecode(res.body) as List<dynamic>;
-    _students = json.map((e) => _StudentItem.fromJson(e)).toList();
-    for (final s in _students) {
+    final students = json.map((e) => _StudentItem.fromJson(e)).toList();
+    if (!mounted || requestId != _studentsRequestId || classId != _selectedClassId) return;
+    _students = students;
+    for (final s in students) {
       _marks[s.id] = '';
       _maxMarks[s.id] = '';
+    }
+  }
+
+  void _syncSubjects() {
+    final classId = _selectedClassId;
+    final subjects = _timetableItems
+        .where((item) => classId != null && item.classId == classId)
+        .map((item) => item.subject)
+        .toSet()
+        .toList()
+      ..sort();
+    _subjects = subjects;
+    if (_subjects.isNotEmpty) {
+      if (_subject.text.trim().isEmpty || !_subjects.contains(_subject.text.trim())) {
+        _subject.text = _subjects.first;
+      }
     }
   }
 
@@ -71,6 +111,10 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
     }
     if (_assessmentName.text.trim().isEmpty) {
       _showSnack(context, 'Assessment name required');
+      return;
+    }
+    if (_subject.text.trim().isEmpty) {
+      _showSnack(context, 'Subject required');
       return;
     }
 
@@ -93,12 +137,14 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
     setState(() => _submitting = true);
     final res = await Services.api.post('/api/v1/teacher/marks', {
       'class_id': _selectedClassId,
+      'subject': _subject.text.trim(),
+      'assessment_type': _assessmentType,
       'assessment_name': _assessmentName.text.trim(),
       'date': _formatDateForApi(_date),
       'records': records,
     });
-    setState(() => _submitting = false);
     if (!mounted) return;
+    setState(() => _submitting = false);
     if (res.statusCode == 200) {
       _showSnack(context, 'Marks uploaded');
     } else {
@@ -133,12 +179,13 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
                                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
-                              value: _selectedClassId,
+                              initialValue: _selectedClassId,
                               items: _classes
                                   .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
                                   .toList(),
                               onChanged: (value) async {
                                 setState(() => _selectedClassId = value);
+                                _syncSubjects();
                                 await _loadStudents();
                                 setState(() {});
                               },
@@ -150,11 +197,46 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
                             const SizedBox(height: 12),
                             TextField(
                               controller: _assessmentName,
-                              decoration: const InputDecoration(
-                                labelText: 'Assessment name',
+                              decoration: InputDecoration(
+                                labelText: _assessmentType == 'test' ? 'Test name' : 'Exam name',
                                 border: OutlineInputBorder(),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                            SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(value: 'test', label: Text('Test')),
+                                ButtonSegment(value: 'exam', label: Text('Exam')),
+                              ],
+                              selected: {_assessmentType},
+                              onSelectionChanged: (selection) {
+                                setState(() => _assessmentType = selection.first);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            if (_subjects.isNotEmpty)
+                              DropdownButtonFormField<String>(
+                                initialValue: _subjects.contains(_subject.text.trim()) ? _subject.text.trim() : null,
+                                items: _subjects
+                                    .map((subject) => DropdownMenuItem(value: subject, child: Text(subject)))
+                                    .toList(),
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() => _subject.text = value);
+                                },
+                                decoration: const InputDecoration(
+                                  labelText: 'Subject',
+                                  border: OutlineInputBorder(),
+                                ),
+                              )
+                            else
+                              TextField(
+                                controller: _subject,
+                                decoration: const InputDecoration(
+                                  labelText: 'Subject',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
                               onPressed: () async {
@@ -293,6 +375,20 @@ class _ClassItem {
 
   factory _ClassItem.fromJson(Map<String, dynamic> json) {
     return _ClassItem(id: json['id'] as int, name: json['name'] as String);
+  }
+}
+
+class _TimetableItem {
+  _TimetableItem({required this.classId, required this.subject});
+
+  final int classId;
+  final String subject;
+
+  factory _TimetableItem.fromJson(Map<String, dynamic> json) {
+    return _TimetableItem(
+      classId: json['class_id'] as int,
+      subject: json['subject'] as String,
+    );
   }
 }
 

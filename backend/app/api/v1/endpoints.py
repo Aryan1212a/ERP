@@ -11,13 +11,16 @@ from app.models.models import (
 )
 from app.schemas.schemas import (
     UserCreate, UserOut, LoginIn, Token, StudentCreate,
-    ClassCreate, ClassOut,
+    ClassCreate, ClassOut, ClassUpdate,
     AttendanceCreate, AttendanceOut,
     TimetableCreate, TimetableOut,
     FeeCreate, FeeOut,
     NoticeCreate, NoticeOut,
     TeacherSummaryOut, TeacherScheduleOut, ScheduleItemOut,
     StudentInsightsOut, StudentInsightOut,
+    TeacherStudentsOut, TeacherStudentListItemOut, TeacherStudentDetailOut,
+    TeacherStudentAttendanceOut, TeacherStudentAssignmentSummaryOut,
+    TeacherStudentPerformanceSummaryOut, TeacherStudentMarkItemOut, TeacherStudentNoticeItemOut,
     TeacherAttendanceIn, TeacherAttendanceOut,
     AssignmentCreateOut,
     TeacherAssignmentsManageOut, TeacherAssignmentManageItemOut, TeacherAssignmentStudentOut,
@@ -29,6 +32,8 @@ from app.schemas.schemas import (
     StudentNoticesOut, StudentNoticeOut,
     AdminCreateUserIn, AdminCreateUserOut,
     AdminResetPasswordOut,
+    AdminUpdateUserIn, AdminTransferUserDataIn, AdminTransferUserDataOut, AdminDeleteUserOut,
+    UserClassAssignmentIn, UserClassAssignmentOut,
     ChangePasswordIn, ChangePasswordOut,
 )
 from app.core.security import hash_password, verify_password, create_access_token
@@ -36,6 +41,7 @@ from app.api.deps import get_current_user, require_role
 
 router = APIRouter()
 ASSIGNMENT_STATUS = {"pending", "submitted", "late", "missing"}
+ASSESSMENT_TYPES = {"test", "exam"}
 
 def _require_class(db: Session, school_id: int, class_id: int) -> Class:
     klass = db.query(Class).filter(
@@ -58,6 +64,42 @@ def _require_student(db: Session, school_id: int, student_id: int, class_id: int
         raise HTTPException(status_code=400, detail="Student not in class")
     return student
 
+def _require_teacher(db: Session, school_id: int, teacher_id: int) -> User:
+    teacher = db.query(User).filter(
+        User.id == teacher_id,
+        User.school_id == school_id,
+        User.role == "teacher",
+    ).first()
+    if not teacher:
+        raise HTTPException(status_code=400, detail="Invalid teacher_id")
+    return teacher
+
+def _class_to_out(db: Session, klass: Class) -> ClassOut:
+    class_teacher_name = None
+    if klass.class_teacher_id is not None:
+        teacher = db.query(User).filter(
+            User.id == klass.class_teacher_id,
+            User.school_id == klass.school_id,
+            User.role == "teacher",
+        ).first()
+        class_teacher_name = teacher.full_name if teacher else None
+    return ClassOut(
+        id=klass.id,
+        school_id=klass.school_id,
+        name=klass.name,
+        class_teacher_id=klass.class_teacher_id,
+        class_teacher_name=class_teacher_name,
+    )
+
+def _teacher_visible_students_query(current_user: User, db: Session):
+    query = db.query(User).filter(
+        User.school_id == current_user.school_id,
+        User.role == "student",
+    )
+    if current_user.role == "teacher" and current_user.class_id is not None:
+        query = query.filter(User.class_id == current_user.class_id)
+    return query
+
 def _generate_username(full_name: str, school_id: int) -> str:
     base = "".join(c for c in full_name.lower() if c.isalnum())
     suffix = secrets.token_hex(2)
@@ -66,6 +108,59 @@ def _generate_username(full_name: str, school_id: int) -> str:
 def _generate_temp_password(length: int = 10) -> str:
     alphabet = string.ascii_letters + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+def _admin_require_user(db: Session, school_id: int, user_id: int) -> User:
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.school_id == school_id,
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+def _user_delete_blockers(db: Session, user: User) -> list[str]:
+    blockers: list[str] = []
+    if user.role == "teacher":
+        if db.query(Class).filter(
+            Class.school_id == user.school_id,
+            Class.class_teacher_id == user.id,
+        ).first():
+            blockers.append("class teacher assignments")
+        if db.query(Assignment).filter(
+            Assignment.school_id == user.school_id,
+            Assignment.teacher_id == user.id,
+        ).first():
+            blockers.append("assignments")
+        if db.query(Mark).filter(
+            Mark.school_id == user.school_id,
+            Mark.teacher_id == user.id,
+        ).first():
+            blockers.append("marks")
+    if user.role == "student":
+        if db.query(Attendance).filter(
+            Attendance.school_id == user.school_id,
+            Attendance.student_id == user.id,
+        ).first():
+            blockers.append("attendance records")
+        if db.query(Fee).filter(
+            Fee.school_id == user.school_id,
+            Fee.student_id == user.id,
+        ).first():
+            blockers.append("fee records")
+        if db.query(Mark).filter(
+            Mark.school_id == user.school_id,
+            Mark.student_id == user.id,
+        ).first():
+            blockers.append("marks")
+        if db.query(AssignmentSubmission).filter(
+            AssignmentSubmission.student_id == user.id,
+        ).first():
+            blockers.append("assignment submissions")
+        if db.query(NoticeRead).filter(
+            NoticeRead.student_id == user.id,
+        ).first():
+            blockers.append("notice reads")
+    return blockers
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
@@ -113,6 +208,8 @@ def admin_create_user(
     username = _generate_username(payload.full_name, current_user.school_id)
     temp_password = _generate_temp_password()
 
+    assigned_class_id = payload.class_id if payload.role in ("student", "teacher") else None
+
     user = User(
         school_id=current_user.school_id,
         email=payload.email,
@@ -121,7 +218,7 @@ def admin_create_user(
         password_hash=hash_password(temp_password),
         role=payload.role,
         must_change_password=True,
-        class_id=payload.class_id if payload.role == "student" else None,
+        class_id=assigned_class_id,
     )
     db.add(user)
     db.commit()
@@ -155,12 +252,7 @@ def admin_reset_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(
-        User.id == user_id,
-        User.school_id == current_user.school_id,
-    ).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _admin_require_user(db, current_user.school_id, user_id)
 
     temp_password = _generate_temp_password()
     user.password_hash = hash_password(temp_password)
@@ -172,6 +264,130 @@ def admin_reset_password(
         temporary_password=temp_password,
         must_change_password=True,
     )
+
+@router.put("/admin/users/{user_id}", response_model=UserOut, dependencies=[Depends(require_role("admin"))])
+def admin_update_user(
+    user_id: int,
+    payload: AdminUpdateUserIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = _admin_require_user(db, current_user.school_id, user_id)
+    if not payload.full_name.strip():
+        raise HTTPException(status_code=400, detail="Full name cannot be empty")
+    if user.role == "admin" and payload.is_active is False:
+        raise HTTPException(status_code=400, detail="Admin users cannot be deactivated")
+    existing = db.query(User).filter(
+        User.email == payload.email,
+        User.id != user.id,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already exists")
+
+    next_class_id = payload.class_id if user.role in ("student", "teacher") else None
+    if user.role == "student" and next_class_id is None:
+        raise HTTPException(status_code=400, detail="Students must remain assigned to a class")
+    if next_class_id is not None:
+        _require_class(db, current_user.school_id, next_class_id)
+
+    user.full_name = payload.full_name.strip()
+    user.email = payload.email
+    user.is_active = payload.is_active
+    user.class_id = next_class_id
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.post(
+    "/admin/users/{user_id}/transfer-data",
+    response_model=AdminTransferUserDataOut,
+    dependencies=[Depends(require_role("admin"))],
+)
+def admin_transfer_user_data(
+    user_id: int,
+    payload: AdminTransferUserDataIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    source = _admin_require_user(db, current_user.school_id, user_id)
+    target = _admin_require_user(db, current_user.school_id, payload.target_user_id)
+    if source.id == target.id:
+        raise HTTPException(status_code=400, detail="Choose a different target user")
+    if source.role != "teacher" or target.role != "teacher":
+        raise HTTPException(status_code=400, detail="Only teacher data can be transferred")
+
+    transferred_classes = db.query(Class).filter(
+        Class.school_id == current_user.school_id,
+        Class.class_teacher_id == source.id,
+    ).update({Class.class_teacher_id: target.id}, synchronize_session=False)
+    transferred_assignments = db.query(Assignment).filter(
+        Assignment.school_id == current_user.school_id,
+        Assignment.teacher_id == source.id,
+    ).update({Assignment.teacher_id: target.id}, synchronize_session=False)
+    transferred_marks = db.query(Mark).filter(
+        Mark.school_id == current_user.school_id,
+        Mark.teacher_id == source.id,
+    ).update({Mark.teacher_id: target.id}, synchronize_session=False)
+    db.commit()
+    return AdminTransferUserDataOut(
+        source_user_id=source.id,
+        target_user_id=target.id,
+        transferred_classes=transferred_classes,
+        transferred_assignments=transferred_assignments,
+        transferred_marks=transferred_marks,
+    )
+
+@router.delete(
+    "/admin/users/{user_id}",
+    response_model=AdminDeleteUserOut,
+    dependencies=[Depends(require_role("admin"))],
+)
+def admin_delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = _admin_require_user(db, current_user.school_id, user_id)
+    if user.role == "admin":
+        raise HTTPException(status_code=400, detail="Admin users cannot be deleted")
+    blockers = _user_delete_blockers(db, user)
+    if blockers:
+        joined = ", ".join(blockers)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete user with existing {joined}. Transfer or deactivate the user instead.",
+        )
+    db.delete(user)
+    db.commit()
+    return AdminDeleteUserOut(deleted=True, user_id=user_id)
+
+@router.put(
+    "/admin/users/{user_id}/class-assignment",
+    response_model=UserClassAssignmentOut,
+    dependencies=[Depends(require_role("admin"))],
+)
+def admin_assign_user_class(
+    user_id: int,
+    payload: UserClassAssignmentIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(
+        User.id == user_id,
+        User.school_id == current_user.school_id,
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role not in ("student", "teacher"):
+        raise HTTPException(status_code=400, detail="Only students and teachers can be assigned to classes")
+
+    if payload.class_id is not None:
+        _require_class(db, current_user.school_id, payload.class_id)
+
+    user.class_id = payload.class_id
+    db.commit()
+    db.refresh(user)
+    return UserClassAssignmentOut(user_id=user.id, class_id=user.class_id, role=user.role)
 
 @router.post("/auth/change-password", response_model=ChangePasswordOut)
 def change_password(
@@ -352,23 +568,37 @@ def create_class(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    record = Class(school_id=current_user.school_id, name=data.name)
+    class_teacher_id = None
+    if data.class_teacher_id is not None:
+        teacher = _require_teacher(db, current_user.school_id, data.class_teacher_id)
+        class_teacher_id = teacher.id
+    record = Class(
+        school_id=current_user.school_id,
+        name=data.name,
+        class_teacher_id=class_teacher_id,
+    )
     db.add(record)
     db.commit()
     db.refresh(record)
-    return record
+    if class_teacher_id is not None:
+        teacher = _require_teacher(db, current_user.school_id, class_teacher_id)
+        teacher.class_id = record.id
+        db.commit()
+        db.refresh(record)
+    return _class_to_out(db, record)
 
 @router.get("/classes", response_model=list[ClassOut])
 def list_classes(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return db.query(Class).filter(Class.school_id == current_user.school_id).all()
+    classes = db.query(Class).filter(Class.school_id == current_user.school_id).order_by(Class.name.asc()).all()
+    return [_class_to_out(db, klass) for klass in classes]
 
 @router.put("/classes/{class_id}", response_model=ClassOut, dependencies=[Depends(require_role("admin", "teacher"))])
 def update_class(
     class_id: int,
-    data: ClassCreate,
+    data: ClassUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -378,10 +608,19 @@ def update_class(
     ).first()
     if not record:
         raise HTTPException(status_code=404, detail="Not found")
-    record.name = data.name
+    if data.name is not None and not data.name.strip():
+        raise HTTPException(status_code=400, detail="Class name cannot be empty")
+    if data.name is not None:
+        record.name = data.name.strip()
+    if data.class_teacher_id is not None:
+        teacher = _require_teacher(db, current_user.school_id, data.class_teacher_id)
+        record.class_teacher_id = teacher.id
+        teacher.class_id = record.id
+    else:
+        record.class_teacher_id = None
     db.commit()
     db.refresh(record)
-    return record
+    return _class_to_out(db, record)
 
 @router.delete("/classes/{class_id}", dependencies=[Depends(require_role("admin", "teacher"))])
 def delete_class(
@@ -395,6 +634,30 @@ def delete_class(
     ).first()
     if not record:
         raise HTTPException(status_code=404, detail="Not found")
+    has_users = db.query(User).filter(
+        User.school_id == current_user.school_id,
+        User.class_id == class_id,
+    ).first()
+    if has_users:
+        raise HTTPException(status_code=400, detail="Cannot delete class with assigned users")
+    has_timetable = db.query(Timetable).filter(
+        Timetable.school_id == current_user.school_id,
+        Timetable.class_id == class_id,
+    ).first()
+    if has_timetable:
+        raise HTTPException(status_code=400, detail="Cannot delete class with timetable entries")
+    has_attendance = db.query(Attendance).filter(
+        Attendance.school_id == current_user.school_id,
+        Attendance.class_id == class_id,
+    ).first()
+    if has_attendance:
+        raise HTTPException(status_code=400, detail="Cannot delete class with attendance records")
+    has_assignments = db.query(Assignment).filter(
+        Assignment.school_id == current_user.school_id,
+        Assignment.class_id == class_id,
+    ).first()
+    if has_assignments:
+        raise HTTPException(status_code=400, detail="Cannot delete class with assignments")
     db.delete(record)
     db.commit()
     return {"deleted": True}
@@ -547,6 +810,203 @@ def teacher_student_insights(current_user: User = Depends(get_current_user), db:
         missing_assignments=missing_students,
     )
 
+@router.get("/teacher/students", response_model=TeacherStudentsOut, dependencies=[Depends(require_role("teacher", "admin"))])
+def teacher_students(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    classes = db.query(Class).filter(Class.school_id == current_user.school_id).all()
+    class_name_map = {c.id: c.name for c in classes}
+    students = _teacher_visible_students_query(current_user, db).order_by(User.full_name.asc()).all()
+
+    items = []
+    for student in students:
+        attendance_rows = db.query(Attendance).filter(
+            Attendance.school_id == current_user.school_id,
+            Attendance.student_id == student.id,
+        ).all()
+        total_records = len(attendance_rows)
+        present = sum(1 for row in attendance_rows if row.status == "present")
+        attendance_pct = round((present / total_records) * 100, 2) if total_records else 0.0
+
+        pending_assignments = 0
+        if student.class_id is not None:
+            assignment_rows = (
+                db.query(Assignment, AssignmentSubmission)
+                .outerjoin(
+                    AssignmentSubmission,
+                    and_(
+                        AssignmentSubmission.assignment_id == Assignment.id,
+                        AssignmentSubmission.student_id == student.id,
+                    ),
+                )
+                .filter(
+                    Assignment.school_id == current_user.school_id,
+                    Assignment.class_id == student.class_id,
+                )
+                .all()
+            )
+            for assignment, submission in assignment_rows:
+                status = submission.status if submission else "pending"
+                if status in ("pending", "missing"):
+                    pending_assignments += 1
+
+        mark_rows = db.query(Mark).filter(
+            Mark.school_id == current_user.school_id,
+            Mark.student_id == student.id,
+        ).all()
+        average_score = round(
+            sum((row.marks / row.max_marks) * 100 for row in mark_rows if row.max_marks) / len(mark_rows),
+            2,
+        ) if mark_rows else 0.0
+
+        items.append(
+            TeacherStudentListItemOut(
+                student_id=student.id,
+                full_name=student.full_name,
+                email=student.email,
+                class_id=student.class_id,
+                class_name=class_name_map.get(student.class_id) if student.class_id is not None else None,
+                attendance_pct=attendance_pct,
+                pending_assignments=pending_assignments,
+                average_score=average_score,
+            )
+        )
+
+    return TeacherStudentsOut(students=items)
+
+@router.get(
+    "/teacher/students/{student_id}",
+    response_model=TeacherStudentDetailOut,
+    dependencies=[Depends(require_role("teacher", "admin"))],
+)
+def teacher_student_detail(
+    student_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    student = _teacher_visible_students_query(current_user, db).filter(User.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    class_name = None
+    if student.class_id is not None:
+        klass = db.query(Class).filter(
+            Class.id == student.class_id,
+            Class.school_id == current_user.school_id,
+        ).first()
+        class_name = klass.name if klass else None
+
+    attendance_rows = db.query(Attendance).filter(
+        Attendance.school_id == current_user.school_id,
+        Attendance.student_id == student.id,
+    ).all()
+    total_records = len(attendance_rows)
+    present = sum(1 for row in attendance_rows if row.status == "present")
+    absent = sum(1 for row in attendance_rows if row.status == "absent")
+    late = sum(1 for row in attendance_rows if row.status == "late")
+    attendance_pct = round((present / total_records) * 100, 2) if total_records else 0.0
+
+    pending = 0
+    submitted = 0
+    late_count = 0
+    missing = 0
+    if student.class_id is not None:
+        assignment_rows = (
+            db.query(Assignment, AssignmentSubmission)
+            .outerjoin(
+                AssignmentSubmission,
+                and_(
+                    AssignmentSubmission.assignment_id == Assignment.id,
+                    AssignmentSubmission.student_id == student.id,
+                ),
+            )
+            .filter(
+                Assignment.school_id == current_user.school_id,
+                Assignment.class_id == student.class_id,
+            )
+            .all()
+        )
+        for assignment, submission in assignment_rows:
+            status = submission.status if submission else "pending"
+            if status == "submitted":
+                submitted += 1
+            elif status == "late":
+                late_count += 1
+            elif status == "missing":
+                missing += 1
+            else:
+                pending += 1
+
+    mark_rows = db.query(Mark).filter(
+        Mark.school_id == current_user.school_id,
+        Mark.student_id == student.id,
+    ).order_by(Mark.date.desc()).all()
+    average_score = round(
+        sum((row.marks / row.max_marks) * 100 for row in mark_rows if row.max_marks) / len(mark_rows),
+        2,
+    ) if mark_rows else 0.0
+    subject_totals: dict[str, list[float]] = {}
+    for row in mark_rows:
+        if not row.max_marks:
+            continue
+        subject_totals.setdefault(row.subject, []).append((row.marks / row.max_marks) * 100)
+    by_subject = {
+        subject: round(sum(values) / len(values), 2)
+        for subject, values in subject_totals.items()
+    }
+
+    recent_marks = [
+        TeacherStudentMarkItemOut(
+            subject=row.subject,
+            assessment_type=row.assessment_type,
+            assessment_name=row.assessment_name,
+            marks=row.marks,
+            max_marks=row.max_marks,
+            percentage=round((row.marks / row.max_marks) * 100, 2) if row.max_marks else 0.0,
+            date=row.date,
+        )
+        for row in mark_rows[:6]
+    ]
+
+    recent_notices = [
+        TeacherStudentNoticeItemOut(
+            notice_id=row.id,
+            title=row.title,
+            created_at=row.created_at,
+        )
+        for row in db.query(Notice).filter(
+            Notice.school_id == current_user.school_id,
+        ).order_by(Notice.created_at.desc()).limit(5).all()
+    ]
+
+    return TeacherStudentDetailOut(
+        student_id=student.id,
+        full_name=student.full_name,
+        email=student.email,
+        class_id=student.class_id,
+        class_name=class_name,
+        attendance=TeacherStudentAttendanceOut(
+            total_records=total_records,
+            present=present,
+            absent=absent,
+            late=late,
+            attendance_pct=attendance_pct,
+        ),
+        assignments=TeacherStudentAssignmentSummaryOut(
+            pending=pending,
+            submitted=submitted,
+            late=late_count,
+            missing=missing,
+        ),
+        performance=TeacherStudentPerformanceSummaryOut(
+            average_score=average_score,
+            by_subject=by_subject,
+        ),
+        recent_marks=recent_marks,
+        recent_notices=recent_notices,
+    )
+
 @router.post("/teacher/attendance", response_model=TeacherAttendanceOut, dependencies=[Depends(require_role("teacher", "admin"))])
 def teacher_mark_attendance(
     payload: TeacherAttendanceIn,
@@ -556,6 +1016,15 @@ def teacher_mark_attendance(
     _require_class(db, current_user.school_id, payload.class_id)
     for record in payload.records:
         _require_student(db, current_user.school_id, record.student_id, payload.class_id)
+        existing = db.query(Attendance).filter(
+            Attendance.school_id == current_user.school_id,
+            Attendance.class_id == payload.class_id,
+            Attendance.student_id == record.student_id,
+            Attendance.date == payload.date,
+        ).first()
+        if existing:
+            existing.status = record.status
+            continue
         db.add(
             Attendance(
                 school_id=current_user.school_id,
@@ -583,6 +1052,7 @@ def teacher_upload_assignment(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    _require_class(db, current_user.school_id, class_id)
     file_url = f"/uploads/{file.filename}" if file else None
     record = Assignment(
         school_id=current_user.school_id,
@@ -781,13 +1251,37 @@ def teacher_enter_marks(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    subject = payload.subject.strip()
+    assessment_type = payload.assessment_type.strip().lower()
+    if not subject:
+        raise HTTPException(status_code=400, detail="Subject is required")
+    if assessment_type not in ASSESSMENT_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid assessment type")
+    _require_class(db, current_user.school_id, payload.class_id)
     for record in payload.records:
+        _require_student(db, current_user.school_id, record.student_id, payload.class_id)
+        existing = db.query(Mark).filter(
+            Mark.school_id == current_user.school_id,
+            Mark.class_id == payload.class_id,
+            Mark.student_id == record.student_id,
+            Mark.subject == subject,
+            Mark.assessment_type == assessment_type,
+            Mark.assessment_name == payload.assessment_name,
+            Mark.date == payload.date,
+        ).first()
+        if existing:
+            existing.teacher_id = current_user.id
+            existing.marks = record.marks
+            existing.max_marks = record.max_marks
+            continue
         db.add(
             Mark(
                 school_id=current_user.school_id,
                 teacher_id=current_user.id,
                 class_id=payload.class_id,
                 student_id=record.student_id,
+                subject=subject,
+                assessment_type=assessment_type,
                 assessment_name=payload.assessment_name,
                 marks=record.marks,
                 max_marks=record.max_marks,
@@ -795,7 +1289,13 @@ def teacher_enter_marks(
             )
         )
     db.commit()
-    return MarksOut(assessment_name=payload.assessment_name, saved=len(payload.records), status="ok")
+    return MarksOut(
+        subject=subject,
+        assessment_type=assessment_type,
+        assessment_name=payload.assessment_name,
+        saved=len(payload.records),
+        status="ok",
+    )
 
 # -------- Student Dashboard Endpoints --------
 
@@ -931,6 +1431,8 @@ def student_performance(current_user: User = Depends(get_current_user), db: Sess
         pct = round((row.marks / row.max_marks) * 100, 2) if row.max_marks else 0.0
         performance.append(
             StudentPerformanceItemOut(
+                subject=row.subject,
+                assessment_type=row.assessment_type,
                 assessment_name=row.assessment_name,
                 marks=row.marks,
                 max_marks=row.max_marks,

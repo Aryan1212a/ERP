@@ -1,4 +1,4 @@
-#!/home/aryan/ERP/backend/venv/bin/python3.11
+#!/home/aryan/ERP/backend/venv/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -269,7 +269,7 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
                               ),
                             );
                           },
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
                           itemCount: _items.length,
                         ),
         ),
@@ -289,8 +289,8 @@ class _AssignmentBadge extends StatelessWidget {
     final text = overdue ? 'Overdue' : 'Active';
     return Chip(
       visualDensity: VisualDensity.compact,
-      backgroundColor: color.withOpacity(0.12),
-      side: BorderSide(color: color.withOpacity(0.3)),
+      backgroundColor: color.withValues(alpha: 0.12),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
       label: Text(
         text,
         style: TextStyle(color: color, fontWeight: FontWeight.w600),
@@ -315,14 +315,14 @@ class _StatusActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fg = selected ? Colors.white : color.shade700;
-    final bg = selected ? color.shade700 : color.withOpacity(0.08);
+    final bg = selected ? color.shade700 : color.withValues(alpha: 0.08);
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: fg,
         backgroundColor: bg,
         side: BorderSide(
-          color: selected ? color.shade900 : color.withOpacity(0.35),
+          color: selected ? color.shade900 : color.withValues(alpha: 0.35),
           width: selected ? 1.5 : 1,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

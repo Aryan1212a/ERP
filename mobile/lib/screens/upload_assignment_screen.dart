@@ -104,7 +104,7 @@ class _UploadAssignmentScreenState extends State<UploadAssignmentScreen> {
                                     )),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
-                              value: _selectedClassId,
+                              initialValue: _selectedClassId,
                               items: _classes
                                   .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
                                   .toList(),

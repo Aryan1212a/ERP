@@ -36,6 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _load() async {
     final res = await Services.api.get('/api/v1/dashboard');
+    if (!mounted) return;
     if (res.statusCode == 200) {
       setState(() => _data = jsonDecode(res.body));
     }
@@ -196,10 +197,10 @@ class _BlurBubble extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(0.18),
+        color: color.withValues(alpha: 0.18),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 60,
             spreadRadius: 10,
           ),
@@ -230,11 +231,11 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withOpacity(0.7),
-        border: Border.all(color: Colors.white.withOpacity(0.4)),
+        color: Colors.white.withValues(alpha: 0.7),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 12),
           ),
@@ -296,7 +297,7 @@ class _Header extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -323,7 +324,7 @@ class _Pill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -394,11 +395,11 @@ class _StatCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withOpacity(0.78),
-        border: Border.all(color: Colors.white.withOpacity(0.5)),
+        color: Colors.white.withValues(alpha: 0.78),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -412,7 +413,7 @@ class _StatCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [stat.accent.withOpacity(0.2), stat.accent.withOpacity(0.05)],
+                colors: [stat.accent.withValues(alpha: 0.2), stat.accent.withValues(alpha: 0.05)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -554,11 +555,11 @@ class _ActionCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: Colors.white.withOpacity(0.82),
-          border: Border.all(color: Colors.white.withOpacity(0.5)),
+          color: Colors.white.withValues(alpha: 0.82),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -572,7 +573,7 @@ class _ActionCard extends StatelessWidget {
               width: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: action.color.withOpacity(0.12),
+                color: action.color.withValues(alpha: 0.12),
               ),
               child: Icon(action.icon, color: action.color),
             ),
@@ -612,7 +613,7 @@ class _Highlights extends StatelessWidget {
         color: const Color(0xFF0F172A),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 26,
             offset: const Offset(0, 16),
           ),
@@ -631,7 +632,7 @@ class _Highlights extends StatelessWidget {
                     ),
               ),
               const Spacer(),
-              Icon(Icons.north_east_rounded, color: Colors.white.withOpacity(0.7)),
+              Icon(Icons.north_east_rounded, color: Colors.white.withValues(alpha: 0.7)),
             ],
           ),
           const SizedBox(height: 14),
@@ -671,7 +672,7 @@ class _HighlightRow extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
       ),
       child: Row(
         children: [
@@ -683,7 +684,7 @@ class _HighlightRow extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                   blurRadius: 10,
                 ),
               ],
@@ -694,7 +695,7 @@ class _HighlightRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.75),
+                    color: Colors.white.withValues(alpha: 0.75),
                   ),
             ),
           ),
@@ -725,9 +726,9 @@ class _LoadingBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         gradient: LinearGradient(
           colors: [
-            color.withOpacity(0.15),
-            color.withOpacity(0.05),
-            color.withOpacity(0.15),
+            color.withValues(alpha: 0.15),
+            color.withValues(alpha: 0.05),
+            color.withValues(alpha: 0.15),
           ],
         ),
       ),

@@ -45,6 +45,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       final scheduleJson = jsonDecode(res[1].body) as Map<String, dynamic>;
       final insightsJson = jsonDecode(res[2].body) as Map<String, dynamic>;
 
+      if (!mounted) return;
       setState(() {
         _summary = _TeacherSummary.fromJson(summaryJson);
         _schedule = (scheduleJson['schedule'] as List<dynamic>)
@@ -54,6 +55,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Unable to load dashboard';
@@ -200,6 +202,12 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     color: const Color(0xFFF59E0B),
                     onTap: () => Navigator.pushNamed(context, '/notices/send'),
                   ),
+                  _QuickActionData(
+                    label: 'Manage Students',
+                    icon: Icons.people_alt_outlined,
+                    color: const Color(0xFFEF4444),
+                    onTap: () => Navigator.pushNamed(context, '/teacher/students'),
+                  ),
                 ],
               ),
             ],
@@ -225,7 +233,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               Navigator.pushNamed(context, '/teacher/assignments/manage');
               break;
             case 3:
-              Navigator.pushNamed(context, '/attendance');
+              Navigator.pushNamed(context, '/teacher/students');
               break;
             case 4:
               Navigator.pushNamed(context, '/profile');
@@ -334,7 +342,7 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: data.color.withOpacity(0.12),
+            backgroundColor: data.color.withValues(alpha: 0.12),
             child: Icon(data.icon, color: data.color),
           ),
           const SizedBox(width: 12),
@@ -486,7 +494,7 @@ class _QuickActionCard extends StatelessWidget {
         child: Column(
           children: [
             CircleAvatar(
-              backgroundColor: data.color.withOpacity(0.12),
+              backgroundColor: data.color.withValues(alpha: 0.12),
               child: Icon(data.icon, color: data.color),
             ),
             const SizedBox(height: 10),
@@ -567,7 +575,7 @@ class _SummarySkeleton extends StatelessWidget {
                   height: 56,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withValues(alpha: 0.2),
                   ),
                 ),
               ),
@@ -593,7 +601,7 @@ class _ScheduleSkeleton extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
             ),
           ),
         ),
@@ -613,7 +621,7 @@ class _InsightsSkeleton extends StatelessWidget {
           height: 24,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
           ),
         ),
         const SizedBox(height: 16),
@@ -621,7 +629,7 @@ class _InsightsSkeleton extends StatelessWidget {
           height: 24,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
           ),
         ),
       ],

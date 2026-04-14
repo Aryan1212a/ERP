@@ -5,7 +5,14 @@ import 'package:flutter/material.dart';
 import '../services/service_locator.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({
+    super.key,
+    this.showAppBar = true,
+    this.showLogoutTile = true,
+  });
+
+  final bool showAppBar;
+  final bool showLogoutTile;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -78,7 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profile = _profile;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: widget.showAppBar ? AppBar(title: const Text('Profile')) : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
@@ -95,14 +102,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Card(
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
                             CircleAvatar(
                               radius: 30,
-                              backgroundColor: theme.colorScheme.primaryContainer,
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
                               child: Text(
                                 _initials(profile.fullName),
                                 style: theme.textTheme.titleMedium?.copyWith(
@@ -118,12 +128,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   Text(
                                     profile.fullName,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(profile.email, style: theme.textTheme.bodyMedium),
+                                  Text(
+                                    profile.email,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
                                   const SizedBox(height: 8),
                                   _RoleChip(role: profile.role),
                                 ],
@@ -137,9 +149,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _InfoCard(
                       title: 'Account Details',
                       rows: [
-                        _InfoRow(label: 'User ID', value: profile.id.toString()),
-                        _InfoRow(label: 'School ID', value: profile.schoolId.toString()),
-                        _InfoRow(label: 'Role', value: _titleCase(profile.role)),
+                        _InfoRow(
+                          label: 'User ID',
+                          value: profile.id.toString(),
+                        ),
+                        _InfoRow(
+                          label: 'School ID',
+                          value: profile.schoolId.toString(),
+                        ),
+                        _InfoRow(
+                          label: 'Role',
+                          value: _titleCase(profile.role),
+                        ),
                         if (profile.username != null)
                           _InfoRow(label: 'Username', value: profile.username!),
                         if (profile.classId != null)
@@ -152,7 +173,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 14),
                     Card(
                       elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
@@ -160,18 +183,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ListTile(
                               leading: const Icon(Icons.password_outlined),
                               title: const Text('Change Password'),
-                              subtitle: const Text('Update your account password'),
-                              onTap: () => Navigator.pushNamed(context, '/auth/change-password'),
-                            ),
-                            const Divider(height: 1),
-                            ListTile(
-                              leading: Icon(Icons.logout, color: theme.colorScheme.error),
-                              title: Text(
-                                'Logout',
-                                style: TextStyle(color: theme.colorScheme.error),
+                              subtitle: const Text(
+                                'Update your account password',
                               ),
-                              onTap: _logout,
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/auth/change-password',
+                              ),
                             ),
+                            if (widget.showLogoutTile) ...[
+                              const Divider(height: 1),
+                              ListTile(
+                                leading: Icon(
+                                  Icons.logout,
+                                  color: theme.colorScheme.error,
+                                ),
+                                title: Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ),
+                                onTap: _logout,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -235,8 +270,8 @@ class _RoleChip extends StatelessWidget {
     };
     return Chip(
       visualDensity: VisualDensity.compact,
-      backgroundColor: color.withOpacity(0.12),
-      side: BorderSide(color: color.withOpacity(0.2)),
+      backgroundColor: color.withValues(alpha: 0.12),
+      side: BorderSide(color: color.withValues(alpha: 0.2)),
       label: Text(
         _titleCase(role),
         style: TextStyle(color: color, fontWeight: FontWeight.w600),
@@ -263,9 +298,9 @@ class _InfoCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             ...rows,
@@ -293,16 +328,18 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -350,7 +387,11 @@ class _ErrorCard extends StatelessWidget {
 }
 
 String _initials(String fullName) {
-  final parts = fullName.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+  final parts = fullName
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
   return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();

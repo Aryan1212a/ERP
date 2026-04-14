@@ -1,0 +1,225 @@
+Project Overview
+
+This project is a School ERP (Enterprise Resource Planning) system designed to digitize and simplify common school operations. It has two main parts:
+
+1. A backend built with Python FastAPI and SQLAlchemy
+2. A mobile application built with Flutter
+
+The main goal of the project is to provide a single platform where admins, teachers, and students can perform their school-related tasks based on their roles and permissions.
+
+Purpose of the Project
+
+The system is made to reduce manual work in schools and improve communication, record management, and academic tracking. Instead of handling attendance, class allocation, assignments, marks, and notices on paper or in separate systems, this ERP combines them into one centralized application.
+
+Main Users and Their Roles
+
+The project supports three user roles:
+
+1. Admin
+2. Teacher
+3. Student
+
+Each role gets a different dashboard and different features after login.
+
+Admin Module
+
+The admin has the highest level of access in the system. The admin can:
+
+- Create users such as students and teachers
+- View all users in the school
+- Reset passwords for users
+- Activate or deactivate accounts
+- Edit user details
+- Manage classes
+- Assign class teachers
+- Assign students and teachers to classes
+- Monitor school-level data from the admin dashboard
+
+The admin dashboard also shows summary information like:
+
+- Total users
+- Number of classes
+- Timetable entries
+- Inactive accounts
+- Accounts that still need password change
+- Classes without assigned class teachers
+
+Teacher Module
+
+The teacher dashboard is focused on classroom and academic work. Teachers can:
+
+- View their daily summary
+- See today’s class schedule
+- Check student insights
+- Mark attendance for students
+- Upload assignments
+- Manage assignment status
+- Enter marks for tests and exams
+- Send notices
+- View the student list
+- Open detailed student profiles
+
+Teacher-specific analytics include:
+
+- Number of classes today
+- Pending attendance
+- Assignments waiting for review
+- Low attendance alerts
+- Students missing assignments
+
+Teachers can also see each student’s:
+
+- Attendance percentage
+- Pending assignments
+- Average score
+- Recent marks
+- Recent notices
+
+Student Module
+
+The student dashboard gives students access to their own academic information. Students can:
+
+- View attendance percentage
+- See today’s timetable
+- Check assignments
+- Track academic performance
+- View notices
+- See alerts for low attendance or pending tasks
+- Access profile information
+
+This makes the app useful not only for school administration but also for helping students stay informed about their academic status.
+
+Authentication and Security
+
+The project includes a login system with JWT token-based authentication. After login, the user is redirected to the correct dashboard based on role.
+
+Security-related features include:
+
+- Password hashing using secure methods
+- Role-based access control
+- Protected API endpoints
+- Forced password change for newly created users or reset-password users
+- User session validation through bearer tokens
+
+There is also a “Remember Me” feature in the mobile app so users can log in more easily.
+
+Backend Architecture
+
+The backend is developed using FastAPI, which provides REST APIs for the mobile app. The backend handles:
+
+- User authentication
+- Business logic
+- Role validation
+- Data storage and retrieval
+- CRUD operations for school entities
+
+The database layer is built with SQLAlchemy ORM. The main database entities are:
+
+- School
+- User
+- Class
+- Attendance
+- Timetable
+- Fee
+- Notice
+- NoticeRead
+- Assignment
+- AssignmentSubmission
+- Mark
+
+This structure shows that the project is designed as a real ERP-style management system, not just a basic login app.
+
+Important Backend Features
+
+The backend provides APIs for:
+
+- Registering and logging in users
+- Getting current user details
+- Creating and managing classes
+- Recording attendance
+- Managing timetables
+- Creating fees
+- Sending notices
+- Teacher dashboards and analytics
+- Student dashboards and summaries
+- Assignment upload and submission tracking
+- Marks entry and performance calculation
+- Password change and admin password reset
+
+The backend also includes startup seeding, which creates demo data like:
+
+- Demo school
+- Admin user
+- Teacher user
+- Student user
+- One sample class
+- Sample timetable
+- Sample attendance
+- Sample assignment
+
+This makes the project easier to demonstrate and test.
+
+Mobile App Architecture
+
+The frontend is built using Flutter, which makes the application cross-platform. The app contains many screens for different workflows, such as:
+
+- Login screen
+- Admin dashboard
+- Teacher dashboard
+- Student dashboard
+- Attendance screens
+- Timetable screens
+- Notice screens
+- Profile screen
+- Change password screen
+- User creation screen
+- Class management screen
+- Marks upload screen
+- Assignment upload and management screens
+
+The mobile app connects to the backend using HTTP APIs through a small service layer, mainly:
+
+- ApiClient
+- AuthService
+- ServiceLocator
+- ThemeService
+
+This keeps the app organized and separates UI from communication logic.
+
+Project Workflow
+
+A normal workflow in this system is:
+
+1. Admin creates teachers and students
+2. Admin creates classes and assigns teachers/students
+3. Users log in with their credentials
+4. Teacher marks attendance and uploads assignments and marks
+5. Admin or teacher sends notices
+6. Student logs in and checks attendance, timetable, assignments, marks, and notices
+
+This makes the project practical for everyday school operations.
+
+Testing
+
+The backend already includes basic automated tests for:
+
+- Authentication
+- Class CRUD operations
+
+This is a good sign because it shows the project is not only implemented but also partially verified.
+
+Strengths of the Project
+
+Some strong points of this project are:
+
+- Clear role-based design
+- Separate dashboards for admin, teacher, and student
+- Real-world school management features
+- Clean client-server architecture
+- Use of modern frameworks like FastAPI and Flutter
+- Secure authentication using JWT
+- Support for attendance, assignments, marks, timetable, notices, and user management
+
+Conclusion
+
+In summary, this project is a complete role-based School ERP system that digitalizes important school processes. It is designed to help school administrators manage users and classes, teachers manage academic activities, and students track their progress. Technically, it combines a FastAPI backend, PostgreSQL/SQLAlchemy database design, and a Flutter mobile app, making it a strong full-stack academic project with practical real-world use.

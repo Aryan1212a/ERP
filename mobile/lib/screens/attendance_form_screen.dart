@@ -18,6 +18,7 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
   List<_StudentItem> _students = [];
   int? _selectedClassId;
   final Map<int, String> _statusByStudent = {};
+  int _studentsRequestId = 0;
 
   @override
   void initState() {
@@ -40,8 +41,10 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
       _classes = classes;
       _selectedClassId = classes.isNotEmpty ? classes.first.id : null;
       await _loadStudentsForClass();
+      if (!mounted) return;
       setState(() => _loading = false);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'Unable to load data';
@@ -50,17 +53,20 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
   }
 
   Future<void> _loadStudentsForClass() async {
+    final requestId = ++_studentsRequestId;
     _students = [];
     _statusByStudent.clear();
     if (_selectedClassId == null) {
       return;
     }
-    final res = await Services.api.get('/api/v1/students?class_id=$_selectedClassId');
+    final classId = _selectedClassId;
+    final res = await Services.api.get('/api/v1/students?class_id=$classId');
     if (res.statusCode != 200) {
       throw Exception('Failed to load students');
     }
     final studentsJson = jsonDecode(res.body) as List<dynamic>;
     final students = studentsJson.map((e) => _StudentItem.fromJson(e)).toList();
+    if (!mounted || requestId != _studentsRequestId || classId != _selectedClassId) return;
     setState(() {
       _students = students;
       for (final s in students) {
@@ -89,6 +95,7 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
     if (!mounted) return;
     if (res.statusCode == 200) {
       _showSnack(context, 'Attendance saved');
+      Navigator.pop(context, true);
     } else {
       _showSnack(context, 'Failed to save attendance');
     }
@@ -134,7 +141,7 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 DropdownButtonFormField<int>(
-                                  value: _selectedClassId,
+                                  initialValue: _selectedClassId,
                                   items: _classes
                                       .map(
                                         (c) => DropdownMenuItem(
@@ -263,10 +270,10 @@ class _BlurBubble extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color.withOpacity(0.18),
+        color: color.withValues(alpha: 0.18),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 60,
             spreadRadius: 10,
           ),
@@ -290,7 +297,7 @@ class _HeaderCard extends StatelessWidget {
             width: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: const Color(0xFF0EA5E9).withOpacity(0.12),
+              color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
             ),
             child: const Icon(Icons.fact_check_rounded, color: Color(0xFF0EA5E9)),
           ),
@@ -304,7 +311,7 @@ class _HeaderCard extends StatelessWidget {
                 Text(
                   dateText,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                 ),
               ],
@@ -354,7 +361,7 @@ class _Pill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
+          color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(

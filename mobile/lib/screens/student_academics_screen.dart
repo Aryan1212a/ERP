@@ -5,7 +5,12 @@ import 'package:flutter/material.dart';
 import '../services/service_locator.dart';
 
 class StudentAcademicsScreen extends StatefulWidget {
-  const StudentAcademicsScreen({super.key});
+  const StudentAcademicsScreen({
+    super.key,
+    this.showScaffold = true,
+  });
+
+  final bool showScaffold;
 
   @override
   State<StudentAcademicsScreen> createState() => _StudentAcademicsScreenState();
@@ -74,109 +79,113 @@ class _StudentAcademicsScreenState extends State<StudentAcademicsScreen> {
             .round();
     final pendingCount = _assignments.where((a) => a.status != 'submitted').length;
 
+    final content = SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _SummaryStrip(
+                        classesToday: _schedule.length,
+                        pendingAssignments: pendingCount,
+                        averageScore: avgScore,
+                      ),
+                      const SizedBox(height: 16),
+                      _SectionTitle(text: 'Today Schedule'),
+                      const SizedBox(height: 8),
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: _schedule.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.all(14),
+                                child: Text('No classes scheduled today.'),
+                              )
+                            : Column(
+                                children: _schedule
+                                    .map(
+                                      (item) => ListTile(
+                                        leading: CircleAvatar(
+                                          radius: 14,
+                                          child: Text(item.period.toString()),
+                                        ),
+                                        title: Text(item.subject),
+                                        subtitle: Text('${item.startTime} - ${item.endTime}'),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                      _SectionTitle(text: 'Assignments'),
+                      const SizedBox(height: 8),
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: _assignments.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.all(14),
+                                child: Text('No assignments yet.'),
+                              )
+                            : Column(
+                                children: _assignments
+                                    .map(
+                                      (item) => ListTile(
+                                        title: Text(item.title),
+                                        subtitle: Text('Due: ${item.dueDate}'),
+                                        trailing: _StatusChip(status: item.status),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                      _SectionTitle(text: 'Performance'),
+                      const SizedBox(height: 8),
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        child: _performance.isEmpty
+                            ? const Padding(
+                                padding: EdgeInsets.all(14),
+                                child: Text('No performance records yet.'),
+                              )
+                            : Column(
+                                children: _performance
+                                    .map(
+                                      (item) => ListTile(
+                                        title: Text(item.assessmentName),
+                                        subtitle: Text(
+                                          '${item.subject} • ${item.assessmentType.toUpperCase()} • ${item.marks}/${item.maxMarks}',
+                                        ),
+                                        trailing: Text('${item.percentage.round()}%'),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                      ),
+                    ],
+                  ),
+      ),
+    );
+    if (!widget.showScaffold) return content;
     return Scaffold(
       appBar: AppBar(title: const Text('Academics')),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? ListView(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            _error!,
-                            style: TextStyle(color: Theme.of(context).colorScheme.error),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _SummaryStrip(
-                          classesToday: _schedule.length,
-                          pendingAssignments: pendingCount,
-                          averageScore: avgScore,
-                        ),
-                        const SizedBox(height: 16),
-                        _SectionTitle(text: 'Today Schedule'),
-                        const SizedBox(height: 8),
-                        Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          child: _schedule.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(14),
-                                  child: Text('No classes scheduled today.'),
-                                )
-                              : Column(
-                                  children: _schedule
-                                      .map(
-                                        (item) => ListTile(
-                                          leading: CircleAvatar(
-                                            radius: 14,
-                                            child: Text(item.period.toString()),
-                                          ),
-                                          title: Text(item.subject),
-                                          subtitle: Text('${item.startTime} - ${item.endTime}'),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ),
-                        const SizedBox(height: 16),
-                        _SectionTitle(text: 'Assignments'),
-                        const SizedBox(height: 8),
-                        Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          child: _assignments.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(14),
-                                  child: Text('No assignments yet.'),
-                                )
-                              : Column(
-                                  children: _assignments
-                                      .map(
-                                        (item) => ListTile(
-                                          title: Text(item.title),
-                                          subtitle: Text('Due: ${item.dueDate}'),
-                                          trailing: _StatusChip(status: item.status),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ),
-                        const SizedBox(height: 16),
-                        _SectionTitle(text: 'Performance'),
-                        const SizedBox(height: 8),
-                        Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          child: _performance.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(14),
-                                  child: Text('No performance records yet.'),
-                                )
-                              : Column(
-                                  children: _performance
-                                      .map(
-                                        (item) => ListTile(
-                                          title: Text(item.assessmentName),
-                                          subtitle: Text('Marks: ${item.marks}/${item.maxMarks}'),
-                                          trailing: Text('${item.percentage.round()}%'),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ),
-                      ],
-                    ),
-        ),
-      ),
+      body: content,
     );
   }
 }
@@ -265,8 +274,8 @@ class _StatusChip extends StatelessWidget {
     return Chip(
       visualDensity: VisualDensity.compact,
       label: Text(status),
-      backgroundColor: color.withOpacity(0.12),
-      side: BorderSide(color: color.withOpacity(0.25)),
+      backgroundColor: color.withValues(alpha: 0.12),
+      side: BorderSide(color: color.withValues(alpha: 0.25)),
       labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600),
     );
   }
@@ -317,12 +326,16 @@ class _AssignmentItem {
 
 class _PerformanceItem {
   _PerformanceItem({
+    required this.subject,
+    required this.assessmentType,
     required this.assessmentName,
     required this.marks,
     required this.maxMarks,
     required this.percentage,
   });
 
+  final String subject;
+  final String assessmentType;
   final String assessmentName;
   final int marks;
   final int maxMarks;
@@ -330,6 +343,8 @@ class _PerformanceItem {
 
   factory _PerformanceItem.fromJson(Map<String, dynamic> json) {
     return _PerformanceItem(
+      subject: json['subject'] as String? ?? 'General',
+      assessmentType: json['assessment_type'] as String? ?? 'test',
       assessmentName: json['assessment_name'] as String,
       marks: json['marks'] as int,
       maxMarks: json['max_marks'] as int,

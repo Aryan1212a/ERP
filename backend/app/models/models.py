@@ -28,6 +28,7 @@ class Class(Base):
     id = Column(Integer, primary_key=True, index=True)
     school_id = Column(Integer, ForeignKey("schools.id"), index=True, nullable=False)
     name = Column(String(100), nullable=False)
+    class_teacher_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 class Attendance(Base):
     __tablename__ = "attendance"
@@ -98,6 +99,8 @@ class Mark(Base):
     teacher_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=False)
     student_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    subject = Column(String(100), nullable=False, default="General")
+    assessment_type = Column(String(20), nullable=False, default="test")
     assessment_name = Column(String(255), nullable=False)
     marks = Column(Integer, nullable=False)
     max_marks = Column(Integer, nullable=False)

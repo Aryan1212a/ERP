@@ -1,11 +1,11 @@
 {
-    "name": "mobile",
-    "short_name": "mobile",
+    "name": "Acadian",
+    "short_name": "Acadian",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Acadian Flutter application.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

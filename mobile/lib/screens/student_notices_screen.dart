@@ -5,7 +5,12 @@ import 'package:flutter/material.dart';
 import '../services/service_locator.dart';
 
 class StudentNoticesScreen extends StatefulWidget {
-  const StudentNoticesScreen({super.key});
+  const StudentNoticesScreen({
+    super.key,
+    this.showScaffold = true,
+  });
+
+  final bool showScaffold;
 
   @override
   State<StudentNoticesScreen> createState() => _StudentNoticesScreenState();
@@ -53,76 +58,78 @@ class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final content = SafeArea(
+      child: RefreshIndicator(
+        onRefresh: _load,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? ListView(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          _error!,
+                          style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        ),
+                      ),
+                    ],
+                  )
+                : _items.isEmpty
+                    ? ListView(
+                        children: const [
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No notices available.'),
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemBuilder: (context, index) {
+                          final item = _items[index];
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.title,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(item.body),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    _formatDate(item.createdAt),
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.7),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemCount: _items.length,
+                      ),
+      ),
+    );
+    if (!widget.showScaffold) return content;
     return Scaffold(
       appBar: AppBar(title: const Text('Student Notices')),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? ListView(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            _error!,
-                            style: TextStyle(color: Theme.of(context).colorScheme.error),
-                          ),
-                        ),
-                      ],
-                    )
-                  : _items.isEmpty
-                      ? ListView(
-                          children: const [
-                            Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text('No notices available.'),
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(12),
-                          itemBuilder: (context, index) {
-                            final item = _items[index];
-                            return Card(
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.title,
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(item.body),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      _formatDate(item.createdAt),
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withOpacity(0.7),
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemCount: _items.length,
-                        ),
-        ),
-      ),
+      body: content,
     );
   }
 }
