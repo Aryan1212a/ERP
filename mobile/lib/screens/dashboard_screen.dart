@@ -1,9 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../services/service_locator.dart';
+import '../ui/app_theme.dart';
+import '../ui/app_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -11,7 +12,7 @@ class DashboardScreen extends StatefulWidget {
     this.title = 'School ERP Dashboard',
     this.subtitle = 'Welcome back',
     this.roleTag = 'Student view',
-    this.roleColor = const Color(0xFF22C55E),
+    this.roleColor = AppColors.primary,
     this.extraActions = const [],
   });
 
@@ -44,167 +45,119 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final baseTheme = Theme.of(context);
-    final textTheme = GoogleFonts.spaceGroteskTextTheme(baseTheme.textTheme);
+    final theme = Theme.of(context);
     final stats = <_StatData>[
       _StatData(
         label: 'Attendance Records',
         value: _data == null ? null : _data!['attendance_records'].toString(),
         subtitle: 'Total captured',
         icon: Icons.fact_check_rounded,
-        accent: const Color(0xFF2DD4BF),
+        color: AppColors.secondary,
       ),
       _StatData(
         label: 'Timetable Entries',
         value: _data == null ? null : _data!['timetable_entries'].toString(),
         subtitle: 'Active sessions',
         icon: Icons.calendar_month_rounded,
-        accent: const Color(0xFF60A5FA),
+        color: AppColors.primary,
       ),
     ];
 
-    return Theme(
-      data: baseTheme.copyWith(textTheme: textTheme),
-      child: Scaffold(
-        body: Stack(
-          children: [
-            const _DashboardBackground(),
-            SafeArea(
-              child: RefreshIndicator(
-                onRefresh: _load,
-                color: const Color(0xFF0F172A),
-                child: CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                        child: _Header(
-                          title: widget.title,
-                          subtitle: widget.subtitle,
-                          roleTag: widget.roleTag,
-                          roleColor: widget.roleColor,
-                          onProfileTap: () => Navigator.pushNamed(context, '/profile'),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _SectionReveal(
-                        delay: 100,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _StatsGrid(stats: stats),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _SectionReveal(
-                        delay: 220,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-                        child: _QuickActions(
-                          onAttendance: () => Navigator.pushNamed(context, '/attendance'),
-                          onTimetable: () => Navigator.pushNamed(context, '/timetable'),
-                          onFees: () => Navigator.pushNamed(context, '/fees'),
-                          onNotices: () => Navigator.pushNamed(context, '/notices'),
-                          extraActions: widget.extraActions,
-                        ),
-                        ),
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _SectionReveal(
-                        delay: 320,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-                          child: _Highlights(
-                            isLoading: _data == null,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+    return Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          color: theme.colorScheme.primary,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.sm),
+                  child: _Header(
+                    title: widget.title,
+                    subtitle: widget.subtitle,
+                    roleTag: widget.roleTag,
+                    roleColor: widget.roleColor,
+                    onProfileTap: () => Navigator.pushNamed(context, '/profile'),
+                  ),
                 ),
               ),
-            ),
-          ],
+              SliverToBoxAdapter(
+                child: _SectionReveal(
+                  delay: 100,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: SectionHeader(
+                      title: 'Overview',
+                      onActionPressed: () {},
+                      actionText: 'View All',
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _SectionReveal(
+                  delay: 100,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: _StatsGrid(stats: stats),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _SectionReveal(
+                  delay: 220,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.sm),
+                    child: SectionHeader(
+                      title: 'Quick Actions',
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _SectionReveal(
+                  delay: 220,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: _QuickActions(
+                      onAttendance: () => Navigator.pushNamed(context, '/attendance'),
+                      onTimetable: () => Navigator.pushNamed(context, '/timetable'),
+                      onFees: () => Navigator.pushNamed(context, '/fees'),
+                      onNotices: () => Navigator.pushNamed(context, '/notices'),
+                      extraActions: widget.extraActions,
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _SectionReveal(
+                  delay: 320,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xxl),
+                    child: SectionHeader(
+                      title: 'Today at a glance',
+                      actionText: 'View All',
+                      onActionPressed: () {},
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _SectionReveal(
+                  delay: 320,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xxl),
+                    child: _Highlights(
+                      isLoading: _data == null,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _DashboardBackground extends StatelessWidget {
-  const _DashboardBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF8FAFC),
-            Color(0xFFE2E8F0),
-            Color(0xFFF8FAFC),
-          ],
-          stops: [0.0, 0.55, 1.0],
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -80,
-            right: -60,
-            child: _BlurBubble(
-              color: Color(0xFF22D3EE),
-              size: 220,
-            ),
-          ),
-          Positioned(
-            bottom: -90,
-            left: -40,
-            child: _BlurBubble(
-              color: Color(0xFF6366F1),
-              size: 240,
-            ),
-          ),
-          Positioned(
-            top: 160,
-            left: 30,
-            child: _BlurBubble(
-              color: Color(0xFFF97316),
-              size: 140,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BlurBubble extends StatelessWidget {
-  const _BlurBubble({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.18),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 60,
-            spreadRadius: 10,
-          ),
-        ],
       ),
     );
   }
@@ -227,20 +180,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withValues(alpha: 0.7),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+    final theme = Theme.of(context);
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
@@ -249,20 +191,16 @@ class _Header extends StatelessWidget {
               children: [
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFF64748B),
-                        letterSpacing: 0.2,
-                      ),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
-                      ),
+                  style: theme.textTheme.headlineMedium,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 Row(
                   children: [
                     _Pill(
@@ -270,40 +208,29 @@ class _Header extends StatelessWidget {
                       label: roleTag,
                       color: roleColor,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     _Pill(
                       icon: Icons.sync_rounded,
                       label: 'Tap to refresh',
-                      color: const Color(0xFF3B82F6),
+                      color: AppColors.primary,
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           InkWell(
             onTap: onProfileTap,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(AppRadii.card),
             child: Container(
-              height: 56,
-              width: 56,
+              height: 48,
+              width: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF334155)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: AppColors.primary,
               ),
-              child: const Icon(Icons.person_rounded, color: Colors.white),
+              child: const Icon(Icons.person_rounded, color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -321,279 +248,26 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppRadii.card),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
+          const SizedBox(width: AppSpacing.xs),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatsGrid extends StatelessWidget {
-  const _StatsGrid({required this.stats});
-
-  final List<_StatData> stats;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Overview',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-              ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 640;
-            return Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: stats
-                  .map(
-                    (stat) => SizedBox(
-                      width: isWide ? (constraints.maxWidth - 14) / 2 : constraints.maxWidth,
-                      child: _StatCard(stat: stat),
-                    ),
-                  )
-                  .toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.stat});
-
-  final _StatData stat;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withValues(alpha: 0.78),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [stat.accent.withValues(alpha: 0.2), stat.accent.withValues(alpha: 0.05)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Icon(stat.icon, color: stat.accent),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  stat.label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFF475569),
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 6),
-                stat.value == null
-                    ? _LoadingBar(color: stat.accent)
-                    : Text(
-                        stat.value!,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
-                            ),
-                      ),
-                const SizedBox(height: 6),
-                Text(
-                  stat.subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF94A3B8),
-                      ),
-                ),
-              ],
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuickActions extends StatelessWidget {
-  const _QuickActions({
-    required this.onAttendance,
-    required this.onTimetable,
-    required this.onFees,
-    required this.onNotices,
-    required this.extraActions,
-  });
-
-  final VoidCallback onAttendance;
-  final VoidCallback onTimetable;
-  final VoidCallback onFees;
-  final VoidCallback onNotices;
-  final List<DashboardActionData> extraActions;
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = <DashboardActionData>[
-      DashboardActionData(
-        label: 'Attendance',
-        subtitle: 'Daily logs',
-        icon: Icons.fact_check_rounded,
-        color: const Color(0xFF14B8A6),
-        onTap: onAttendance,
-      ),
-      DashboardActionData(
-        label: 'Timetable',
-        subtitle: 'Class schedule',
-        icon: Icons.event_available_rounded,
-        color: const Color(0xFF3B82F6),
-        onTap: onTimetable,
-      ),
-      DashboardActionData(
-        label: 'Fees',
-        subtitle: 'Payments',
-        icon: Icons.account_balance_wallet_rounded,
-        color: const Color(0xFFF97316),
-        onTap: onFees,
-      ),
-      DashboardActionData(
-        label: 'Notices',
-        subtitle: 'Announcements',
-        icon: Icons.notifications_active_rounded,
-        color: const Color(0xFF8B5CF6),
-        onTap: onNotices,
-      ),
-      ...extraActions,
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick actions',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-              ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 640;
-            final itemWidth = isWide ? (constraints.maxWidth - 14) / 2 : (constraints.maxWidth - 14) / 2;
-            return Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: actions
-                  .map(
-                    (action) => SizedBox(
-                      width: itemWidth,
-                      child: _ActionCard(action: action),
-                    ),
-                  )
-                  .toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({required this.action});
-
-  final DashboardActionData action;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: action.onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white.withValues(alpha: 0.82),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 44,
-              width: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: action.color.withValues(alpha: 0.12),
-              ),
-              child: Icon(action.icon, color: action.color),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              action.label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              action.subtitle,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF64748B),
-                  ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -606,52 +280,28 @@ class _Highlights extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: const Color(0xFF0F172A),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 26,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Today at a glance',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const Spacer(),
-              Icon(Icons.north_east_rounded, color: Colors.white.withValues(alpha: 0.7)),
-            ],
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
           _HighlightRow(
             label: 'Attendance logs sync',
             value: isLoading ? 'Syncing…' : 'Up to date',
-            color: const Color(0xFF22C55E),
+            color: AppColors.success,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md),
           _HighlightRow(
             label: 'Next timetable review',
             value: 'Open timetable',
-            color: const Color(0xFF38BDF8),
+            color: AppColors.primary,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md),
           _HighlightRow(
             label: 'Pending fee actions',
             value: 'Check fees module',
-            color: const Color(0xFFFACC15),
+            color: AppColors.warning,
           ),
         ],
       ),
@@ -668,43 +318,38 @@ class _HighlightRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        color: theme.colorScheme.surface,
       ),
       child: Row(
         children: [
           Container(
-            height: 10,
-            width: 10,
+            height: AppSpacing.sm,
+            width: AppSpacing.sm,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.8),
-                  blurRadius: 10,
-                ),
-              ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.75),
-                  ),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -723,14 +368,8 @@ class _LoadingBar extends StatelessWidget {
       height: 18,
       width: 120,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: LinearGradient(
-          colors: [
-            color.withValues(alpha: 0.15),
-            color.withValues(alpha: 0.05),
-            color.withValues(alpha: 0.15),
-          ],
-        ),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        color: color.withValues(alpha: 0.2),
       ),
     );
   }
@@ -796,14 +435,94 @@ class _StatData {
     required this.value,
     required this.subtitle,
     required this.icon,
-    required this.accent,
+    required this.color,
   });
 
   final String label;
   final String? value;
   final String subtitle;
   final IconData icon;
-  final Color accent;
+  final Color color;
+}
+
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.stats});
+
+  final List<_StatData> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 640;
+        return Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          children: stats
+              .map(
+                (stat) => SizedBox(
+                  width: isWide ? (constraints.maxWidth - AppSpacing.md) / 2 : constraints.maxWidth,
+                  child: _StatCard(stat: stat),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({required this.stat});
+
+  final _StatData stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
+        children: [
+          Container(
+            height: 48,
+            width: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: stat.color.withValues(alpha: 0.1),
+            ),
+            child: Icon(stat.icon, color: stat.color),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stat.label,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                stat.value == null
+                    ? _LoadingBar(color: stat.color)
+                    : Text(
+                        stat.value!,
+                        style: theme.textTheme.headlineMedium,
+                      ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  stat.subtitle,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class DashboardActionData {
@@ -820,4 +539,113 @@ class DashboardActionData {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+}
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({
+    required this.onAttendance,
+    required this.onTimetable,
+    required this.onFees,
+    required this.onNotices,
+    required this.extraActions,
+  });
+
+  final VoidCallback onAttendance;
+  final VoidCallback onTimetable;
+  final VoidCallback onFees;
+  final VoidCallback onNotices;
+  final List<DashboardActionData> extraActions;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = <DashboardActionData>[
+      DashboardActionData(
+        label: 'Attendance',
+        subtitle: 'Daily logs',
+        icon: Icons.fact_check_rounded,
+        color: AppColors.secondary,
+        onTap: onAttendance,
+      ),
+      DashboardActionData(
+        label: 'Timetable',
+        subtitle: 'Class schedule',
+        icon: Icons.event_available_rounded,
+        color: AppColors.primary,
+        onTap: onTimetable,
+      ),
+      DashboardActionData(
+        label: 'Fees',
+        subtitle: 'Payments',
+        icon: Icons.account_balance_wallet_rounded,
+        color: AppColors.warning,
+        onTap: onFees,
+      ),
+      DashboardActionData(
+        label: 'Notices',
+        subtitle: 'Announcements',
+        icon: Icons.notifications_active_rounded,
+        color: AppColors.secondary,
+        onTap: onNotices,
+      ),
+      ...extraActions,
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 640;
+        final itemWidth = isWide ? (constraints.maxWidth - AppSpacing.md) / 2 : (constraints.maxWidth - AppSpacing.md) / 2;
+        return Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          children: actions
+              .map(
+                (action) => SizedBox(
+                  width: itemWidth,
+                  child: _ActionCard(action: action),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({required this.action});
+
+  final DashboardActionData action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      onTap: action.onTap,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: action.color.withValues(alpha: 0.12),
+            ),
+            child: Icon(action.icon, color: action.color),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            action.label,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            action.subtitle,
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
 }

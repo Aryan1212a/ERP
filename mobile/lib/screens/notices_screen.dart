@@ -56,6 +56,7 @@ class _NoticesScreenState extends State<NoticesScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'notices_fab',
         onPressed: _openSendNotice,
         icon: const Icon(Icons.campaign_outlined),
         label: const Text('Send Notice'),

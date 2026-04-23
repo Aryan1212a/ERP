@@ -1,6 +1,1 @@
-from fastapi import APIRouter
-from app.api.v1 import endpoints
-
-api_router = APIRouter()
-
-api_router.include_router(endpoints.router, tags=["v1"])
+from app.api.v1.api import api_router

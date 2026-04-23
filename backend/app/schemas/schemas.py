@@ -270,6 +270,8 @@ class TeacherAssignmentManageItemOut(BaseModel):
     class_id: int
     class_name: str | None = None
     title: str
+    description: str | None = None
+    file_url: str | None = None
     due_date: date
     overdue: bool
     students: list[TeacherAssignmentStudentOut]
@@ -333,6 +335,15 @@ class StudentAssignmentsOut(BaseModel):
     student_id: int
     assignments: list[StudentAssignmentOut]
 
+class StudentAttendanceItemOut(BaseModel):
+    date: date
+    status: str
+    class_id: int
+
+class StudentAttendanceOut(BaseModel):
+    student_id: int
+    attendance: list[StudentAttendanceItemOut]
+
 class StudentPerformanceItemOut(BaseModel):
     subject: str
     assessment_type: str
@@ -351,6 +362,7 @@ class StudentNoticeOut(BaseModel):
     title: str
     body: str
     created_at: datetime
+    sender_name: str # Added sender name
 
 class StudentNoticesOut(BaseModel):
     student_id: int

@@ -60,6 +60,7 @@ class _UploadAssignmentScreenState extends State<UploadAssignmentScreen> {
     final uri = Uri.parse('${Services.api.baseUrl}/api/v1/teacher/assignments');
     final request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer ${Services.api.token}';
+    request.headers['ngrok-skip-browser-warning'] = 'true';
     request.fields['class_id'] = _selectedClassId.toString();
     request.fields['title'] = _title.text.trim();
     request.fields['description'] = _description.text.trim();

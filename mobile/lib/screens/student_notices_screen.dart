@@ -20,6 +20,7 @@ class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
   bool _loading = true;
   String? _error;
   List<_StudentNoticeItem> _items = [];
+  final Set<String> _pinnedNoticeIds = {};
 
   @override
   void initState() {
@@ -54,6 +55,13 @@ class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
         _error = 'Unable to load notices';
       });
     }
+  }
+
+  void _clearNotices() {
+    setState(() {
+      _items.clear();
+      _pinnedNoticeIds.clear();
+    });
   }
 
   @override
@@ -98,17 +106,57 @@ class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.title,
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w700,
+                                    Text(
+                                      item.title,
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'From: ${item.senderName}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).colorScheme.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            item.body,
+                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          ),
                                         ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(item.body),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    _formatDate(item.createdAt),
+                                        IconButton(
+                                          icon: Icon(
+                                            _pinnedNoticeIds.contains(item.createdAt.toIso8601String())
+                                                ? Icons.push_pin
+                                                : Icons.push_pin_outlined,
+                                            color: _pinnedNoticeIds.contains(item.createdAt.toIso8601String())
+                                                ? Theme.of(context).colorScheme.primary
+                                                : null,
+                                          ),
+                                          tooltip: _pinnedNoticeIds.contains(item.createdAt.toIso8601String())
+                                              ? 'Unpin notice'
+                                              : 'Pin notice',
+                                          onPressed: () {
+                                            setState(() {
+                                              final noticeId = item.createdAt.toIso8601String();
+                                              if (_pinnedNoticeIds.contains(noticeId)) {
+                                                _pinnedNoticeIds.remove(noticeId);
+                                              } else {
+                                                _pinnedNoticeIds.add(noticeId);
+                                              }
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      _formatDate(item.createdAt),
                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -128,7 +176,12 @@ class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
     );
     if (!widget.showScaffold) return content;
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Notices')),
+      appBar: AppBar(title: const Text('Student Notices'), actions: [IconButton(icon: const Icon(Icons.clear_all), tooltip: 'Clear notices', onPressed: () {
+                    setState(() {
+                      _items.clear();
+                      _pinnedNoticeIds.clear();
+                    });
+                  })]),
       body: content,
     );
   }
@@ -139,17 +192,20 @@ class _StudentNoticeItem {
     required this.title,
     required this.body,
     required this.createdAt,
+    required this.senderName,
   });
 
   final String title;
   final String body;
   final DateTime createdAt;
+  final String senderName;
 
   factory _StudentNoticeItem.fromJson(Map<String, dynamic> json) {
     return _StudentNoticeItem(
       title: json['title'] as String,
       body: json['body'] as String,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      senderName: json['sender_name'] as String,
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
 import '../services/service_locator.dart';
+import '../ui/app_theme.dart';
 
 class AttendanceFormScreen extends StatefulWidget {
   const AttendanceFormScreen({super.key});
@@ -31,23 +33,29 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
       _loading = true;
       _error = null;
     });
+
     try {
       final classesRes = await Services.api.get('/api/v1/classes');
       if (classesRes.statusCode != 200) {
-        throw Exception('Failed to load');
+        throw Exception('Failed to load classes');
       }
+
       final classesJson = jsonDecode(classesRes.body) as List<dynamic>;
-      final classes = classesJson.map((e) => _ClassItem.fromJson(e)).toList();
+      final classes = classesJson
+          .map((item) => _ClassItem.fromJson(item as Map<String, dynamic>))
+          .toList();
+
       _classes = classes;
       _selectedClassId = classes.isNotEmpty ? classes.first.id : null;
       await _loadStudentsForClass();
+
       if (!mounted) return;
       setState(() => _loading = false);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Unable to load data';
+        _error = 'Unable to load attendance data';
       });
     }
   }
@@ -56,58 +64,88 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
     final requestId = ++_studentsRequestId;
     _students = [];
     _statusByStudent.clear();
-    if (_selectedClassId == null) {
+
+    final classId = _selectedClassId;
+    if (classId == null) {
+      if (mounted) {
+        setState(() {});
+      }
       return;
     }
-    final classId = _selectedClassId;
+
     final res = await Services.api.get('/api/v1/students?class_id=$classId');
     if (res.statusCode != 200) {
       throw Exception('Failed to load students');
     }
+
     final studentsJson = jsonDecode(res.body) as List<dynamic>;
-    final students = studentsJson.map((e) => _StudentItem.fromJson(e)).toList();
-    if (!mounted || requestId != _studentsRequestId || classId != _selectedClassId) return;
+    final students = studentsJson
+        .map((item) => _StudentItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+
+    if (!mounted || requestId != _studentsRequestId || classId != _selectedClassId) {
+      return;
+    }
+
     setState(() {
       _students = students;
-      for (final s in students) {
-        _statusByStudent.putIfAbsent(s.id, () => 'present');
+      for (final student in students) {
+        _statusByStudent.putIfAbsent(student.id, () => 'present');
       }
     });
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 30)),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _date = picked);
+  }
+
   Future<void> _submit() async {
-    if (_selectedClassId == null) {
+    final classId = _selectedClassId;
+    if (classId == null) {
       _showSnack(context, 'Please select a class');
       return;
     }
-    final dateStr = _formatDateForApi(_date);
+
     final records = _students
-        .map((s) => {
-              'student_id': s.id,
-              'status': _statusByStudent[s.id] ?? 'present',
-            })
+        .map(
+          (student) => {
+            'student_id': student.id,
+            'status': _statusByStudent[student.id] ?? 'present',
+          },
+        )
         .toList();
+
     final res = await Services.api.post('/api/v1/teacher/attendance', {
-      'class_id': _selectedClassId,
-      'date': dateStr,
+      'class_id': classId,
+      'date': _formatDateForApi(_date),
       'records': records,
     });
+
     if (!mounted) return;
     if (res.statusCode == 200) {
       _showSnack(context, 'Attendance saved');
       Navigator.pop(context, true);
-    } else {
-      _showSnack(context, 'Failed to save attendance');
+      return;
     }
+
+    _showSnack(context, 'Failed to save attendance');
   }
 
   int _countStatus(String status) {
-    return _statusByStudent.values.where((s) => s == status).length;
+    return _statusByStudent.values.where((value) => value == status).length;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -125,10 +163,10 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                 : _error != null
                     ? _ErrorState(message: _error!, onRetry: _load)
                     : ListView(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
                         children: [
                           _HeaderCard(dateText: _formatDate(_date)),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacing.lg),
                           _FormCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,55 +174,38 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                                 Text(
                                   'Class & Date',
                                   style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: AppSpacing.md),
                                 DropdownButtonFormField<int>(
                                   initialValue: _selectedClassId,
                                   items: _classes
                                       .map(
-                                        (c) => DropdownMenuItem(
-                                          value: c.id,
-                                          child: Text(c.name),
+                                        (item) => DropdownMenuItem<int>(
+                                          value: item.id,
+                                          child: Text(item.name),
                                         ),
                                       )
                                       .toList(),
-                                  onChanged: (value) {
+                                  onChanged: (value) async {
                                     setState(() => _selectedClassId = value);
-                                    _loadStudentsForClass();
+                                    await _loadStudentsForClass();
                                   },
                                   decoration: const InputDecoration(
                                     labelText: 'Class',
-                                    border: OutlineInputBorder(),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: AppSpacing.lg),
                                 OutlinedButton.icon(
-                                  onPressed: () async {
-                                    final picked = await showDatePicker(
-                                      context: context,
-                                      initialDate: _date,
-                                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
-                                      lastDate: DateTime.now().add(const Duration(days: 30)),
-                                    );
-                                    if (picked != null) {
-                                      setState(() => _date = picked);
-                                    }
-                                  },
+                                  onPressed: _pickDate,
                                   icon: const Icon(Icons.calendar_month_outlined),
                                   label: Text(_formatDate(_date)),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          _SummaryPills(
-                            present: _countStatus('present'),
-                            absent: _countStatus('absent'),
-                            late: _countStatus('late'),
-                          ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: AppSpacing.lg),
                           _FormCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,25 +213,38 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                                 Text(
                                   'Students',
                                   style: theme.textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                                const SizedBox(height: 12),
-                                ..._students.map((s) => _StudentRow(
-                                      student: s,
-                                      status: _statusByStudent[s.id] ?? 'present',
+                                const SizedBox(height: AppSpacing.md),
+                                if (_students.isEmpty)
+                                  Text(
+                                    'No students found for this class.',
+                                    style: theme.textTheme.bodySmall,
+                                  )
+                                else
+                                  ..._students.map(
+                                    (student) => _StudentRow(
+                                      student: student,
+                                      status: _statusByStudent[student.id] ?? 'present',
                                       onStatusChanged: (value) {
-                                        setState(() => _statusByStudent[s.id] = value);
+                                        setState(() => _statusByStudent[student.id] = value);
                                       },
-                                    )),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          FilledButton.icon(
-                            onPressed: _submit,
-                            icon: const Icon(Icons.check_circle_outline),
-                            label: const Text('Save Attendance'),
+                          const SizedBox(height: AppSpacing.lg),
+                          _SummaryPills(
+                            present: _countStatus('present'),
+                            absent: _countStatus('absent'),
+                            late: _countStatus('late'),
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          FilledButton(
+                            onPressed: _students.isEmpty ? null : _submit,
+                            child: const Text('Save Attendance'),
                           ),
                         ],
                       ),
@@ -285,6 +319,7 @@ class _BlurBubble extends StatelessWidget {
 
 class _HeaderCard extends StatelessWidget {
   const _HeaderCard({required this.dateText});
+
   final String dateText;
 
   @override
@@ -311,8 +346,8 @@ class _HeaderCard extends StatelessWidget {
                 Text(
                   dateText,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
@@ -369,16 +404,14 @@ class _Pill extends StatelessWidget {
             Text(
               value.toString(),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: color,
-                  ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
             ),
           ],
         ),
@@ -412,12 +445,12 @@ class _StudentRow extends StatelessWidget {
           ),
           SegmentedButton<String>(
             segments: const [
-              ButtonSegment(value: 'present', label: Text('Present')),
-              ButtonSegment(value: 'absent', label: Text('Absent')),
-              ButtonSegment(value: 'late', label: Text('Late')),
+              ButtonSegment<String>(value: 'present', label: Text('Present')),
+              ButtonSegment<String>(value: 'absent', label: Text('Absent')),
+              ButtonSegment<String>(value: 'late', label: Text('Late')),
             ],
             selected: {status},
-            onSelectionChanged: (value) => onStatusChanged(value.first),
+            onSelectionChanged: (selection) => onStatusChanged(selection.first),
           ),
         ],
       ),
@@ -427,13 +460,16 @@ class _StudentRow extends StatelessWidget {
 
 class _FormCard extends StatelessWidget {
   const _FormCard({required this.child});
+
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: child,
@@ -474,6 +510,7 @@ class _ErrorState extends StatelessWidget {
 
 class _ClassItem {
   _ClassItem({required this.id, required this.name});
+
   final int id;
   final String name;
 
@@ -487,6 +524,7 @@ class _ClassItem {
 
 class _StudentItem {
   _StudentItem({required this.id, required this.name});
+
   final int id;
   final String name;
 
@@ -500,16 +538,26 @@ class _StudentItem {
 
 String _formatDate(DateTime date) {
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${date.day} ${months[date.month - 1]} ${date.year}';
 }
 
 String _formatDateForApi(DateTime date) {
-  final m = date.month.toString().padLeft(2, '0');
-  final d = date.day.toString().padLeft(2, '0');
-  return '${date.year}-$m-$d';
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$month-$day';
 }
 
 void _showSnack(BuildContext context, String text) {

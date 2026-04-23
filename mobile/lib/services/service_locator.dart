@@ -17,7 +17,9 @@ String _defaultBaseUrl() {
 }
 
 class Services {
-  static final String _envBaseUrl = const String.fromEnvironment('API_BASE_URL');
+  static final String _envBaseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+  );
   static final ApiClient api = ApiClient(
     _envBaseUrl.isNotEmpty ? _envBaseUrl : _defaultBaseUrl(),
   );

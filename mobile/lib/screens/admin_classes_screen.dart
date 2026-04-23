@@ -14,6 +14,8 @@ class AdminClassesScreen extends StatefulWidget {
 class _AdminClassesScreenState extends State<AdminClassesScreen> {
   bool _loading = true;
   String? _error;
+  String _searchQuery = '';
+  String _classFilter = 'all';
   List<_ClassItem> _classes = [];
   List<_UserItem> _teachers = [];
   List<_UserItem> _students = [];
@@ -201,9 +203,8 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                     children: [
                       Text('Manage Class', style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 12),
-                      TextField(
-                        controller: TextEditingController(text: className)
-                          ..selection = TextSelection.collapsed(offset: className.length),
+                      TextFormField(
+                        initialValue: className,
                         onChanged: (value) => className = value,
                         decoration: const InputDecoration(
                           labelText: 'Class Name',
@@ -384,9 +385,28 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedQuery = _searchQuery.trim().toLowerCase();
+    final visibleClasses = _classes.where((item) {
+      final teacherCount = _teachers.where((teacher) => teacher.classId == item.id).length;
+      final studentCount = _students.where((student) => student.classId == item.id).length;
+      final matchesQuery = normalizedQuery.isEmpty ||
+          item.name.toLowerCase().contains(normalizedQuery) ||
+          (item.classTeacherName?.toLowerCase().contains(normalizedQuery) ?? false);
+      final matchesFilter = switch (_classFilter) {
+        'unassigned' => item.classTeacherName == null,
+        'empty' => studentCount == 0,
+        'staffed' => teacherCount > 0,
+        _ => true,
+      };
+      return matchesQuery && matchesFilter;
+    }).toList();
+    final unassignedCount = _classes.where((item) => item.classTeacherName == null).length;
+    final emptyCount = _classes.where((item) => _students.where((student) => student.classId == item.id).isEmpty).length;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Classes')),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'admin_classes_fab',
         onPressed: _createClass,
         icon: const Icon(Icons.add_rounded),
         label: const Text('Add Class'),
@@ -411,13 +431,88 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                       children: [
+                        TextField(
+                          onChanged: (value) => setState(() => _searchQuery = value),
+                          decoration: InputDecoration(
+                            hintText: 'Search classes or class teachers',
+                            prefixIcon: const Icon(Icons.search_rounded),
+                            suffixIcon: _searchQuery.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Clear search',
+                                    onPressed: () => setState(() => _searchQuery = ''),
+                                    icon: const Icon(Icons.close_rounded),
+                                  ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _ClassSummaryChip(label: 'Classes', value: _classes.length.toString()),
+                              const SizedBox(width: 8),
+                              _ClassSummaryChip(
+                                label: 'Needs Teacher',
+                                value: unassignedCount.toString(),
+                                color: const Color(0xFFF59E0B),
+                              ),
+                              const SizedBox(width: 8),
+                              _ClassSummaryChip(
+                                label: 'Empty',
+                                value: emptyCount.toString(),
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _ClassFilterChip(
+                                label: 'All',
+                                selected: _classFilter == 'all',
+                                onTap: () => setState(() => _classFilter = 'all'),
+                              ),
+                              const SizedBox(width: 8),
+                              _ClassFilterChip(
+                                label: 'No Teacher',
+                                selected: _classFilter == 'unassigned',
+                                onTap: () => setState(() => _classFilter = 'unassigned'),
+                              ),
+                              const SizedBox(width: 8),
+                              _ClassFilterChip(
+                                label: 'No Students',
+                                selected: _classFilter == 'empty',
+                                onTap: () => setState(() => _classFilter = 'empty'),
+                              ),
+                              const SizedBox(width: 8),
+                              _ClassFilterChip(
+                                label: 'Has Staff',
+                                selected: _classFilter == 'staffed',
+                                onTap: () => setState(() => _classFilter = 'staffed'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         if (_classes.isEmpty)
                           const Padding(
                             padding: EdgeInsets.only(bottom: 12),
                             child: Text('No classes available yet.'),
                           )
+                        else if (visibleClasses.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
+                            child: Text('No classes match the current search and filters.'),
+                          )
                         else
-                          ..._classes.map((item) {
+                          ...visibleClasses.map((item) {
                             final teacherCount =
                                 _teachers.where((teacher) => teacher.classId == item.id).length;
                             final studentCount =
@@ -540,6 +635,59 @@ class _CountChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text('$label: $count'),
+    );
+  }
+}
+
+class _ClassSummaryChip extends StatelessWidget {
+  const _ClassSummaryChip({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = color ?? Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: resolvedColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: resolvedColor.withValues(alpha: 0.16)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: resolvedColor,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
+class _ClassFilterChip extends StatelessWidget {
+  const _ClassFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import '../services/service_locator.dart';
+import 'dart:convert';
 
 class SendNoticeScreen extends StatefulWidget {
   const SendNoticeScreen({super.key});
@@ -13,8 +13,44 @@ class _SendNoticeScreenState extends State<SendNoticeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _body = TextEditingController();
+
   bool _loading = false;
   String? _error;
+
+  List<dynamic> _notices = [];
+  int? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotices();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+  final res = await Services.api.get('/api/v1/auth/me');
+
+  if (res.statusCode == 200) {
+    final data = jsonDecode(res.body);
+
+    setState(() {
+      _currentUserId = data['id'];
+    });
+  }
+}
+
+
+  Future<void> _loadNotices() async {
+  final res = await Services.api.get('/api/v1/notices');
+
+  if (res.statusCode == 200) {
+    final data = jsonDecode(res.body);
+
+    setState(() {
+      _notices = data;
+    });
+  }
+}
 
   @override
   void dispose() {
@@ -25,103 +61,148 @@ class _SendNoticeScreenState extends State<SendNoticeScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    final res = await Services.api.post('/api/v1/notices', {
-      'title': _title.text.trim(),
-      'body': _body.text.trim(),
-    });
+    try {
+      final res = await Services.api.post('/api/v1/notices', {
+        'title': _title.text.trim(),
+        'body': _body.text.trim(),
+      });
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() => _loading = false);
-    if (res.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notice sent')),
-      );
-      Navigator.pop(context, true);
-      return;
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notice sent')),
+        );
+
+        _title.clear();
+        _body.clear();
+
+        await _loadNotices(); // refresh list
+
+        setState(() => _loading = false);
+      } else {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to send notice';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = 'Something went wrong';
+      });
     }
-    setState(() => _error = 'Failed to send notice');
+  }
+
+  Future<void> _deleteNotice(int id) async {
+    try {
+      final res = await Services.api.delete('/api/v1/notices/$id');
+
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Deleted successfully')),
+        );
+
+        await _loadNotices();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Delete failed')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Send Notice')),
+      appBar: AppBar(
+        title: const Text('Send Notice'),
+        centerTitle: true,
+      ),
+
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
+            /// FORM
+            Expanded(
+              flex: 2,
+              child: ListView(
                 padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextFormField(
-                        controller: _title,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Title',
-                          hintText: 'Exam schedule update',
-                          border: OutlineInputBorder(),
+                children: [
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _title,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          validator: (v) =>
+                              v!.trim().isEmpty ? 'Required' : null,
                         ),
-                        validator: (value) {
-                          final v = value?.trim() ?? '';
-                          if (v.isEmpty) return 'Title is required';
-                          if (v.length < 3) return 'Title is too short';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _body,
-                        maxLines: 6,
-                        decoration: const InputDecoration(
-                          labelText: 'Message',
-                          hintText: 'Write notice details here...',
-                          border: OutlineInputBorder(),
-                          alignLabelWithHint: true,
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _body,
+                          maxLines: 4,
+                          decoration:
+                              const InputDecoration(labelText: 'Message'),
+                          validator: (v) =>
+                              v!.trim().isEmpty ? 'Required' : null,
                         ),
-                        validator: (value) {
-                          final v = value?.trim() ?? '';
-                          if (v.isEmpty) return 'Message is required';
-                          if (v.length < 5) return 'Message is too short';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            _error!,
-                            style: TextStyle(color: Theme.of(context).colorScheme.error),
-                          ),
+                        const SizedBox(height: 10),
+
+                        if (_error != null)
+                          Text(_error!,
+                              style: const TextStyle(color: Colors.red)),
+
+                        const SizedBox(height: 10),
+
+                        FilledButton(
+                          onPressed: _loading ? null : _submit,
+                          child: Text(_loading ? 'Sending...' : 'Send'),
                         ),
-                      FilledButton.icon(
-                        onPressed: _loading ? null : _submit,
-                        icon: _loading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.send_outlined),
-                        label: Text(_loading ? 'Sending...' : 'Send Notice'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
+            ),
+
+            /// NOTICE LIST
+            Expanded(
+              flex: 3,
+              child: _notices.isEmpty
+                  ? const Center(child: Text("No notices"))
+                  : ListView.builder(
+                      itemCount: _notices.length,
+                      itemBuilder: (context, index) {
+                        final notice = _notices[index];
+
+                        final isOwner =
+                            notice['sender_id'] == _currentUserId;
+
+                        return Card(
+                          margin: const EdgeInsets.all(8),
+                          child: ListTile(
+                            title: Text(notice['title']),
+                            subtitle: Text(notice['body']),
+                            trailing: isOwner
+                                ? IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () =>
+                                        _deleteNotice(notice['id']),
+                                  )
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

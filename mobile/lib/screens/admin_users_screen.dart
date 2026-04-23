@@ -15,6 +15,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   bool _loading = true;
   String? _error;
   String _roleFilter = 'all';
+  String _searchQuery = '';
+  String _statusFilter = 'all';
   bool _selectionMode = false;
   List<_AdminUserItem> _users = [];
   List<_ClassItem> _classes = [];
@@ -437,6 +439,26 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedQuery = _searchQuery.trim().toLowerCase();
+    final visibleUsers = _users.where((user) {
+      final className = _classNameById(user.classId)?.toLowerCase() ?? '';
+      final matchesQuery = normalizedQuery.isEmpty ||
+          user.fullName.toLowerCase().contains(normalizedQuery) ||
+          user.email.toLowerCase().contains(normalizedQuery) ||
+          (user.username?.toLowerCase().contains(normalizedQuery) ?? false) ||
+          className.contains(normalizedQuery);
+      final matchesStatus = switch (_statusFilter) {
+        'needs-password' => user.mustChangePassword,
+        'inactive' => !user.isActive,
+        'unassigned' => user.classId == null,
+        _ => true,
+      };
+      return matchesQuery && matchesStatus;
+    }).toList();
+    final activeCount = _users.where((user) => user.isActive).length;
+    final needsPasswordCount = _users.where((user) => user.mustChangePassword).length;
+    final unassignedCount = _users.where((user) => user.classId == null).length;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_selectionMode ? '${_selectedIds.length} Selected' : 'Manage Users'),
@@ -461,6 +483,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'admin_users_fab',
         onPressed: _openCreateUser,
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Create User'),
@@ -469,20 +492,103 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'all', label: Text('All')),
-                  ButtonSegment(value: 'student', label: Text('Students')),
-                  ButtonSegment(value: 'teacher', label: Text('Teachers')),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: Column(
+                children: [
+                  TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, email, username, or class',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _searchQuery.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Clear search',
+                              onPressed: () => setState(() => _searchQuery = ''),
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _AdminSummaryChip(
+                          label: 'Total',
+                          value: _users.length.toString(),
+                        ),
+                        const SizedBox(width: 8),
+                        _AdminSummaryChip(
+                          label: 'Active',
+                          value: activeCount.toString(),
+                          color: const Color(0xFF16A34A),
+                        ),
+                        const SizedBox(width: 8),
+                        _AdminSummaryChip(
+                          label: 'Password Reset',
+                          value: needsPasswordCount.toString(),
+                          color: const Color(0xFFF59E0B),
+                        ),
+                        const SizedBox(width: 8),
+                        _AdminSummaryChip(
+                          label: 'No Class',
+                          value: unassignedCount.toString(),
+                          color: const Color(0xFF2563EB),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'all', label: Text('All')),
+                      ButtonSegment(value: 'student', label: Text('Students')),
+                      ButtonSegment(value: 'teacher', label: Text('Teachers')),
+                    ],
+                    selected: {_roleFilter},
+                    onSelectionChanged: (selection) {
+                      final next = selection.first;
+                      if (next == _roleFilter) return;
+                      setState(() => _roleFilter = next);
+                      _load();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _FilterChipButton(
+                          label: 'Everything',
+                          selected: _statusFilter == 'all',
+                          onTap: () => setState(() => _statusFilter = 'all'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChipButton(
+                          label: 'Needs Password Change',
+                          selected: _statusFilter == 'needs-password',
+                          onTap: () => setState(() => _statusFilter = 'needs-password'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChipButton(
+                          label: 'Inactive',
+                          selected: _statusFilter == 'inactive',
+                          onTap: () => setState(() => _statusFilter = 'inactive'),
+                        ),
+                        const SizedBox(width: 8),
+                        _FilterChipButton(
+                          label: 'No Class',
+                          selected: _statusFilter == 'unassigned',
+                          onTap: () => setState(() => _statusFilter = 'unassigned'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-                selected: {_roleFilter},
-                onSelectionChanged: (selection) {
-                  final next = selection.first;
-                  if (next == _roleFilter) return;
-                  setState(() => _roleFilter = next);
-                  _load();
-                },
               ),
             ),
             Expanded(
@@ -502,21 +608,25 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                               ),
                             ],
                           )
-                        : _users.isEmpty
+                        : visibleUsers.isEmpty
                             ? ListView(
-                                children: const [
+                                children: [
                                   Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: Text('No users found for this filter.'),
+                                    padding: const EdgeInsets.all(16),
+                                    child: Text(
+                                      _users.isEmpty
+                                          ? 'No users found for this role filter.'
+                                          : 'No users match the current search and quick filters.',
+                                    ),
                                   ),
                                 ],
                               )
                             : ListView.separated(
                                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                                itemCount: _users.length,
+                                itemCount: visibleUsers.length,
                                 separatorBuilder: (_, _) => const SizedBox(height: 8),
                                 itemBuilder: (context, index) {
-                                  final user = _users[index];
+                                  final user = visibleUsers[index];
                                   final isBusy = _busyIds.contains(user.id);
                                   final className = _classNameById(user.classId);
                                   return Card(
@@ -757,6 +867,59 @@ String _initials(String name) {
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
   return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+}
+
+class _AdminSummaryChip extends StatelessWidget {
+  const _AdminSummaryChip({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedColor = color ?? Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: resolvedColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: resolvedColor.withValues(alpha: 0.16)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: resolvedColor,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
+class _FilterChipButton extends StatelessWidget {
+  const _FilterChipButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+    );
+  }
 }
 
 Future<void> _showCredentialsDialog(

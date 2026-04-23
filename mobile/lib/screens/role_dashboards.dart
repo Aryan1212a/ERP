@@ -6,7 +6,10 @@ import 'student_academics_screen.dart';
 import 'student_dashboard_screen.dart';
 import 'student_notices_screen.dart';
 import 'student_schedule_screen.dart';
+import 'attendance_screen.dart';
+import 'teacher_assignments_manage_screen.dart';
 import 'teacher_dashboard_screen.dart';
+import 'teacher_students_screen.dart';
 
 class StudentDashboardRoute extends StatelessWidget {
   const StudentDashboardRoute({super.key});
@@ -22,7 +25,7 @@ class TeacherDashboardRoute extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const TeacherDashboardScreen();
+    return const _TeacherShell();
   }
 }
 
@@ -72,6 +75,53 @@ class _StudentShellState extends State<_StudentShell> {
           NavigationDestination(icon: Icon(Icons.school_outlined), label: 'Academics'),
           NavigationDestination(icon: Icon(Icons.schedule_outlined), label: 'Schedule'),
           NavigationDestination(icon: Icon(Icons.notifications_outlined), label: 'Notices'),
+          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+        onDestinationSelected: (index) {
+          setState(() => _selectedIndex = index);
+        },
+      ),
+    );
+  }
+}
+
+class _TeacherShell extends StatefulWidget {
+  const _TeacherShell();
+
+  @override
+  State<_TeacherShell> createState() => _TeacherShellState();
+}
+
+class _TeacherShellState extends State<_TeacherShell> {
+  int _selectedIndex = 0;
+
+  late final List<Widget> _screens = [
+    const TeacherDashboardScreen(showNavigation: false),
+    const AttendanceScreen(showBackButton: false),
+    const TeacherAssignmentsManageScreen(showScaffold: false),
+    const TeacherStudentsScreen(showScaffold: false),
+    const ProfileScreen(showAppBar: false, showLogoutTile: true),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: isDark ? const Color(0xFF0D1724) : Colors.white,
+        indicatorColor: isDark ? const Color(0xFF203554) : const Color(0xFFDCE7FF),
+        selectedIndex: _selectedIndex,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.fact_check_outlined), label: 'Attendance'),
+          NavigationDestination(icon: Icon(Icons.assignment_outlined), label: 'Assignments'),
+          NavigationDestination(icon: Icon(Icons.people_outline), label: 'Students'),
           NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
         onDestinationSelected: (index) {

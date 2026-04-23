@@ -5,7 +5,12 @@ import 'package:flutter/material.dart';
 import '../services/service_locator.dart';
 
 class TeacherStudentsScreen extends StatefulWidget {
-  const TeacherStudentsScreen({super.key});
+  const TeacherStudentsScreen({
+    super.key,
+    this.showScaffold = true,
+  });
+
+  final bool showScaffold;
 
   @override
   State<TeacherStudentsScreen> createState() => _TeacherStudentsScreenState();
@@ -61,9 +66,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
           (student.className ?? '').toLowerCase().contains(query);
     }).toList();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Students')),
-      body: SafeArea(
+    final body = SafeArea(
         child: Column(
           children: [
             Padding(
@@ -151,7 +154,15 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
             ),
           ],
         ),
-      ),
+    );
+
+    if (!widget.showScaffold) {
+      return body;
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Students')),
+      body: body,
     );
   }
 }

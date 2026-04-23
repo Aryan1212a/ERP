@@ -1,12 +1,18 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import '../services/service_locator.dart';
 
-/// Teacher Dashboard (Material 3, mobile-first)
-/// Live data is pulled from the backend teacher endpoints.
+import '../services/service_locator.dart';
+import '../ui/app_components.dart';
+import '../ui/app_theme.dart';
+
 class TeacherDashboardScreen extends StatefulWidget {
-  const TeacherDashboardScreen({super.key});
+  const TeacherDashboardScreen({
+    super.key,
+    this.showNavigation = true,
+  });
+
+  final bool showNavigation;
 
   @override
   State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
@@ -30,259 +36,230 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       _loading = true;
       _error = null;
     });
+
     try {
-      final res = await Future.wait([
+      final responses = await Future.wait([
         Services.api.get('/api/v1/teacher/summary'),
         Services.api.get('/api/v1/teacher/schedule/today'),
         Services.api.get('/api/v1/teacher/students/insights'),
       ]);
-
-      if (res.any((r) => r.statusCode != 200)) {
-        throw Exception('Failed to load dashboard');
+      if (responses.any((response) => response.statusCode != 200)) {
+        throw Exception('Unable to load dashboard');
       }
 
-      final summaryJson = jsonDecode(res[0].body) as Map<String, dynamic>;
-      final scheduleJson = jsonDecode(res[1].body) as Map<String, dynamic>;
-      final insightsJson = jsonDecode(res[2].body) as Map<String, dynamic>;
-
       if (!mounted) return;
       setState(() {
-        _summary = _TeacherSummary.fromJson(summaryJson);
-        _schedule = (scheduleJson['schedule'] as List<dynamic>)
+        _summary = _TeacherSummary.fromJson(
+          jsonDecode(responses[0].body) as Map<String, dynamic>,
+        );
+        _schedule = (jsonDecode(responses[1].body)['schedule'] as List<dynamic>)
             .map((item) => _ScheduleItem.fromJson(item as Map<String, dynamic>))
             .toList();
-        _insights = _StudentInsights.fromJson(insightsJson);
+        _insights = _StudentInsights.fromJson(
+          jsonDecode(responses[2].body) as Map<String, dynamic>,
+        );
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Unable to load dashboard';
+        _error = 'Unable to load teacher dashboard';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Teacher Dashboard'),
-      ),
-      body: SafeArea(
+    final summary = _summary;
+    final content = SafeArea(
         child: RefreshIndicator(
           onRefresh: _load,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              // Greeting section
-              _GreetingSection(
-                teacherName: 'Teacher',
-                dateText: _formatDate(DateTime.now()),
-              ),
-              const SizedBox(height: 16),
-
-              // Summary cards
-              _SectionHeader(title: 'Today Summary'),
-              const SizedBox(height: 8),
-              if (_loading)
-                const _SummarySkeleton()
-              else if (_summary != null)
-                _SummaryGrid(
-                  cards: [
-                    _SummaryCardData(
-                      title: 'Classes Today',
-                      value: _summary!.todayClasses.toString(),
-                      icon: Icons.class_outlined,
-                      color: const Color(0xFF3B82F6),
-                    ),
-                    _SummaryCardData(
-                      title: 'Pending Attendance',
-                      value: _summary!.pendingAttendance.toString(),
-                      icon: Icons.fact_check_outlined,
-                      color: const Color(0xFFF59E0B),
-                    ),
-                    _SummaryCardData(
-                      title: 'Assignments to Review',
-                      value: _summary!.assignmentsToReview.toString(),
-                      icon: Icons.assignment_outlined,
-                      color: const Color(0xFF8B5CF6),
-                    ),
-                    _SummaryCardData(
-                      title: 'Low Attendance Alerts',
-                      value: _summary!.lowAttendanceAlerts.toString(),
-                      icon: Icons.warning_amber_rounded,
-                      color: const Color(0xFFEF4444),
-                    ),
-                  ],
-                )
-              else
-                _ErrorState(message: _error ?? 'No summary data'),
-              const SizedBox(height: 20),
-
-              // Schedule timeline
-              _SectionHeader(title: 'Today’s Schedule'),
-              const SizedBox(height: 8),
-              _CardContainer(
-                child: _loading
-                    ? const _ScheduleSkeleton()
-                    : _schedule.isEmpty
-                        ? const _EmptyText('No classes scheduled today.')
-                        : Column(
-                            children: _schedule
-                                .map(
-                                  (item) => _TimelineItem(
-                                    time: '${item.startTime} - ${item.endTime}',
-                                    title: item.subject,
-                                    subtitle: 'Class ${item.classId}',
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-              ),
-              const SizedBox(height: 20),
-
-              // Student insights
-              _SectionHeader(title: 'Student Insights'),
-              const SizedBox(height: 8),
-              _CardContainer(
-                child: _loading
-                    ? const _InsightsSkeleton()
-                    : _insights == null
-                        ? _ErrorState(message: _error ?? 'No insights')
-                        : Column(
-                            children: [
-                              _InsightRow(
-                                icon: Icons.trending_down_rounded,
-                                title: 'Below attendance threshold',
-                                value: '${_insights!.belowAttendanceThreshold.length} students',
-                                color: const Color(0xFFEF4444),
-                              ),
-                              const Divider(height: 24),
-                              _InsightRow(
-                                icon: Icons.assignment_late_outlined,
-                                title: 'Missing assignments',
-                                value: '${_insights!.missingAssignments.length} students',
-                                color: const Color(0xFFF59E0B),
-                              ),
-                            ],
-                          ),
-              ),
-              const SizedBox(height: 20),
-
-              // Quick actions
-              _SectionHeader(title: 'Quick Actions'),
-              const SizedBox(height: 8),
-              _QuickActionsGrid(
-                actions: [
-                  _QuickActionData(
-                    label: 'Mark Attendance',
+              _TeacherHeader(summary: summary),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSectionHeader(title: 'Quick Actions'),
+              const SizedBox(height: AppSpacing.lg),
+              _ResponsiveDashboardGrid(
+                mainAxisExtent: 132,
+                children: [
+                  _ActionCard(
                     icon: Icons.fact_check_outlined,
-                    color: const Color(0xFF3B82F6),
+                    label: 'Attendance',
                     onTap: () => Navigator.pushNamed(context, '/attendance/form'),
                   ),
-                  _QuickActionData(
-                    label: 'Upload Assignment',
-                    icon: Icons.upload_file_outlined,
-                    color: const Color(0xFF8B5CF6),
-                    onTap: () => Navigator.pushNamed(context, '/teacher/assignments/upload'),
-                  ),
-                  _QuickActionData(
-                    label: 'Enter Marks',
-                    icon: Icons.edit_note_outlined,
-                    color: const Color(0xFF10B981),
-                    onTap: () => Navigator.pushNamed(context, '/teacher/marks/upload'),
-                  ),
-                  _QuickActionData(
+                  _ActionCard(
+                    icon: Icons.notifications_active_outlined,
                     label: 'Send Notice',
-                    icon: Icons.campaign_outlined,
-                    color: const Color(0xFFF59E0B),
                     onTap: () => Navigator.pushNamed(context, '/notices/send'),
                   ),
-                  _QuickActionData(
-                    label: 'Manage Students',
+                  _ActionCard(
+                    icon: Icons.edit_note_outlined,
+                    label: 'Marks',
+                    onTap: () => Navigator.pushNamed(context, '/teacher/marks/upload'),
+                  ),
+                  _ActionCard(
+                    icon: Icons.upload_file_outlined,
+                    label: 'Assignments',
+                    onTap: () => Navigator.pushNamed(context, '/teacher/assignments/manage'),
+                  ),
+                  _ActionCard(
                     icon: Icons.people_alt_outlined,
-                    color: const Color(0xFFEF4444),
+                    label: 'Students',
                     onTap: () => Navigator.pushNamed(context, '/teacher/students'),
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSectionHeader(title: 'Key Metrics'),
+              const SizedBox(height: AppSpacing.lg),
+              if (_loading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(AppSpacing.xl),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (_error != null || summary == null)
+                AppStateCard(
+                  title: 'Dashboard unavailable',
+                  message: _error ?? 'No teacher summary available.',
+                  icon: Icons.error_outline_rounded,
+                  action: AppButton.secondary(label: 'Retry', onPressed: _load),
+                )
+              else
+                _ResponsiveDashboardGrid(
+                  mainAxisExtent: 148,
+                  children: [
+                    AppMetricCard(
+                      label: 'Classes Today',
+                      value: '${summary.todayClasses}',
+                      icon: Icons.class_outlined,
+                    ),
+                    AppMetricCard(
+                      label: 'Pending Attendance',
+                      value: '${summary.pendingAttendance}',
+                      icon: Icons.schedule_outlined,
+                      accent: AppColors.warning,
+                    ),
+                    AppMetricCard(
+                      label: 'Assignments to Review',
+                      value: '${summary.assignmentsToReview}',
+                      icon: Icons.assignment_outlined,
+                      accent: AppColors.secondary,
+                    ),
+                    AppMetricCard(
+                      label: 'Low Attendance Alerts',
+                      value: '${summary.lowAttendanceAlerts}',
+                      icon: Icons.warning_amber_rounded,
+                      accent: AppColors.danger,
+                    ),
+                  ],
+                ),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSectionHeader(title: 'Today’s Schedule'),
+              const SizedBox(height: AppSpacing.lg),
+              AppCard(
+                child: _schedule.isEmpty
+                    ? Text(
+                        _loading ? 'Loading schedule...' : 'No classes scheduled today.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      )
+                    : Column(
+                        children: [
+                          for (final item in _schedule) ...[
+                            InfoTile(
+                              icon: Icons.schedule_rounded,
+                              label: item.subject,
+                              value: '${item.startTime} - ${item.endTime}  •  Class ${item.classId}',
+                            ),
+                            if (item != _schedule.last) ...[
+                              const SizedBox(height: AppSpacing.lg),
+                              const Divider(),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+                          ],
+                        ],
+                      ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSectionHeader(title: 'Student Insights'),
+              const SizedBox(height: AppSpacing.lg),
+              AppCard(
+                child: Column(
+                  children: [
+                    InfoTile(
+                      icon: Icons.trending_down_rounded,
+                      label: 'Attendance below threshold',
+                      value: '${_insights?.belowAttendanceThreshold.length ?? 0} student(s)',
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(),
+                    const SizedBox(height: AppSpacing.lg),
+                    InfoTile(
+                      icon: Icons.assignment_late_outlined,
+                      label: 'Missing assignments',
+                      value: '${_insights?.missingAssignments.length ?? 0} student(s)',
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-      ),
-      // Bottom navigation for primary app areas
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          NavigationDestination(icon: Icon(Icons.class_outlined), label: 'Classes'),
-          NavigationDestination(icon: Icon(Icons.assignment_outlined), label: 'Assignments'),
-          NavigationDestination(icon: Icon(Icons.people_outline), label: 'Students'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 1:
-              Navigator.pushNamed(context, '/attendance/form');
-              break;
-            case 2:
-              Navigator.pushNamed(context, '/teacher/assignments/manage');
-              break;
-            case 3:
-              Navigator.pushNamed(context, '/teacher/students');
-              break;
-            case 4:
-              Navigator.pushNamed(context, '/profile');
-              break;
-            default:
-              break;
-          }
-        },
-      ),
+    );
+
+    if (!widget.showNavigation) {
+      return content;
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Teacher Dashboard')),
+      body: content,
     );
   }
 }
 
-/// Greeting section with teacher name and date
-class _GreetingSection extends StatelessWidget {
-  const _GreetingSection({
-    required this.teacherName,
-    required this.dateText,
-  });
+class _TeacherHeader extends StatelessWidget {
+  const _TeacherHeader({required this.summary});
 
-  final String teacherName;
-  final String dateText;
+  final _TeacherSummary? summary;
 
   @override
   Widget build(BuildContext context) {
-    return _CardContainer(
-      child: Row(
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.surfaceAlt],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CircleAvatar(
-            radius: 24,
-            child: Icon(Icons.person_outline),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Good morning,', style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-                Text(
-                  teacherName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(dateText, style: Theme.of(context).textTheme.bodySmall),
-              ],
+          Text('Teaching Overview', style: theme.textTheme.headlineMedium),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Review your classes, teaching workload, and follow-up items for today.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.textPrimary.withValues(alpha: 0.88),
             ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.md,
+            children: [
+              _HeaderChip(label: '${summary?.todayClasses ?? 0} classes'),
+              _HeaderChip(label: '${summary?.pendingAttendance ?? 0} pending'),
+              _HeaderChip(label: '${summary?.assignmentsToReview ?? 0} to review'),
+            ],
           ),
         ],
       ),
@@ -290,383 +267,101 @@ class _GreetingSection extends StatelessWidget {
   }
 }
 
-/// Section header
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+class _ResponsiveDashboardGrid extends StatelessWidget {
+  const _ResponsiveDashboardGrid({
+    required this.children,
+    required this.mainAxisExtent,
+  });
 
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-    );
-  }
-}
-
-/// Summary grid (2 columns on mobile)
-class _SummaryGrid extends StatelessWidget {
-  const _SummaryGrid({required this.cards});
-
-  final List<_SummaryCardData> cards;
+  final List<Widget> children;
+  final double mainAxisExtent;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: cards
-              .map((card) => SizedBox(width: itemWidth, child: _SummaryCard(data: card)))
-              .toList(),
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1100
+            ? 4
+            : width >= 720
+                ? 3
+                : 2;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: children.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: AppSpacing.lg,
+            mainAxisSpacing: AppSpacing.lg,
+            mainAxisExtent: mainAxisExtent,
+          ),
+          itemBuilder: (context, index) => children[index],
         );
       },
     );
   }
 }
 
-/// Summary card
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.data});
+class _HeaderChip extends StatelessWidget {
+  const _HeaderChip({required this.label});
 
-  final _SummaryCardData data;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return _CardContainer(
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: data.color.withValues(alpha: 0.12),
-            child: Icon(data.icon, color: data.color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(data.title, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-                Text(
-                  data.value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
       ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      child: Text(label),
     );
   }
 }
 
-/// Timeline item for schedule
-class _TimelineItem extends StatelessWidget {
-  const _TimelineItem({
-    required this.time,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-  });
-
-  final String time;
-  final String title;
-  final String subtitle;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              height: 10,
-              width: 10,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            Container(width: 2, height: 36, color: Colors.grey.shade300),
-          ],
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(time, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Student insight row
-class _InsightRow extends StatelessWidget {
-  const _InsightRow({
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
     required this.icon,
-    required this.title,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String title;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.bodyMedium),
-        ),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Quick actions grid
-class _QuickActionsGrid extends StatelessWidget {
-  const _QuickActionsGrid({required this.actions});
-
-  final List<_QuickActionData> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: actions
-              .map((action) => SizedBox(width: itemWidth, child: _QuickActionCard(data: action)))
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
-/// Quick action card
-class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({required this.data});
-
-  final _QuickActionData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: data.onTap,
-      child: _CardContainer(
-        child: Column(
-          children: [
-            CircleAvatar(
-              backgroundColor: data.color.withValues(alpha: 0.12),
-              child: Icon(data.icon, color: data.color),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              data.label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Reusable card container (Material 3)
-class _CardContainer extends StatelessWidget {
-  const _CardContainer({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return _CardContainer(
-      child: Text(message, style: Theme.of(context).textTheme.bodySmall),
-    );
-  }
-}
-
-class _EmptyText extends StatelessWidget {
-  const _EmptyText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(text, style: Theme.of(context).textTheme.bodySmall);
-  }
-}
-
-class _SummarySkeleton extends StatelessWidget {
-  const _SummarySkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: List.generate(
-            4,
-            (_) => SizedBox(
-              width: itemWidth,
-              child: _CardContainer(
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.withValues(alpha: 0.2),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ScheduleSkeleton extends StatelessWidget {
-  const _ScheduleSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: List.generate(
-        3,
-        (_) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            height: 40,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: Colors.grey.withValues(alpha: 0.2),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InsightsSkeleton extends StatelessWidget {
-  const _InsightsSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          height: 24,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey.withValues(alpha: 0.2),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 24,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.grey.withValues(alpha: 0.2),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryCardData {
-  const _SummaryCardData({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-}
-
-class _QuickActionData {
-  const _QuickActionData({
     required this.label,
-    required this.icon,
-    required this.color,
     required this.onTap,
   });
 
-  final String label;
   final IconData icon;
-  final Color color;
+  final String label;
   final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+            ),
+            child: Icon(icon, color: AppColors.primary),
+          ),
+          const Spacer(),
+          Text(label, style: Theme.of(context).textTheme.titleMedium),
+        ],
+      ),
+    );
+  }
 }
 
 class _TeacherSummary {
-  _TeacherSummary({
+  const _TeacherSummary({
     required this.todayClasses,
     required this.pendingAttendance,
     required this.assignmentsToReview,
@@ -680,98 +375,52 @@ class _TeacherSummary {
 
   factory _TeacherSummary.fromJson(Map<String, dynamic> json) {
     return _TeacherSummary(
-      todayClasses: json['today_classes'] as int,
-      pendingAttendance: json['pending_attendance'] as int,
-      assignmentsToReview: json['assignments_to_review'] as int,
-      lowAttendanceAlerts: json['low_attendance_alerts'] as int,
-    );
-  }
-}
-
-class _ScheduleItem {
-  _ScheduleItem({
-    required this.period,
-    required this.startTime,
-    required this.endTime,
-    required this.subject,
-    required this.classId,
-  });
-
-  final int period;
-  final String startTime;
-  final String endTime;
-  final String subject;
-  final int classId;
-
-  factory _ScheduleItem.fromJson(Map<String, dynamic> json) {
-    return _ScheduleItem(
-      period: json['period'] as int,
-      startTime: json['start_time'] as String,
-      endTime: json['end_time'] as String,
-      subject: json['subject'] as String,
-      classId: json['class_id'] as int,
+      todayClasses: json['today_classes'] as int? ?? 0,
+      pendingAttendance: json['pending_attendance'] as int? ?? 0,
+      assignmentsToReview: json['assignments_to_review'] as int? ?? 0,
+      lowAttendanceAlerts: json['low_attendance_alerts'] as int? ?? 0,
     );
   }
 }
 
 class _StudentInsights {
-  _StudentInsights({
+  const _StudentInsights({
     required this.belowAttendanceThreshold,
     required this.missingAssignments,
   });
 
-  final List<_StudentInsight> belowAttendanceThreshold;
-  final List<_StudentInsight> missingAssignments;
+  final List<dynamic> belowAttendanceThreshold;
+  final List<dynamic> missingAssignments;
 
   factory _StudentInsights.fromJson(Map<String, dynamic> json) {
     return _StudentInsights(
-      belowAttendanceThreshold: (json['below_attendance_threshold'] as List<dynamic>)
-          .map((item) => _StudentInsight.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      missingAssignments: (json['missing_assignments'] as List<dynamic>)
-          .map((item) => _StudentInsight.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      belowAttendanceThreshold:
+          json['below_attendance_threshold'] as List<dynamic>? ?? const [],
+      missingAssignments:
+          json['missing_assignments'] as List<dynamic>? ?? const [],
     );
   }
 }
 
-class _StudentInsight {
-  _StudentInsight({
-    required this.studentId,
-    required this.name,
-    required this.reason,
+class _ScheduleItem {
+  const _ScheduleItem({
+    required this.subject,
+    required this.classId,
+    required this.startTime,
+    required this.endTime,
   });
 
-  final int studentId;
-  final String name;
-  final String reason;
+  final String subject;
+  final int classId;
+  final String startTime;
+  final String endTime;
 
-  factory _StudentInsight.fromJson(Map<String, dynamic> json) {
-    return _StudentInsight(
-      studentId: json['student_id'] as int,
-      name: json['name'] as String,
-      reason: json['reason'] as String,
+  factory _ScheduleItem.fromJson(Map<String, dynamic> json) {
+    return _ScheduleItem(
+      subject: json['subject'] as String? ?? 'Class',
+      classId: json['class_id'] as int? ?? 0,
+      startTime: json['start_time'] as String? ?? '--:--',
+      endTime: json['end_time'] as String? ?? '--:--',
     );
   }
-}
-
-String _formatDate(DateTime date) {
-  const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
-  ];
-  final weekday = weekdays[date.weekday - 1];
-  final month = months[date.month - 1];
-  return '$weekday, $month ${date.day}, ${date.year}';
 }
