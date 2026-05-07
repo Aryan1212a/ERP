@@ -538,6 +538,9 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                                           ),
                                           OutlinedButton(
                                             onPressed: () => _manageClass(item),
+                                            style: OutlinedButton.styleFrom(
+                                              minimumSize: const Size(0, 40),
+                                            ),
                                             child: const Text('Manage'),
                                           ),
                                           const SizedBox(width: 8),
