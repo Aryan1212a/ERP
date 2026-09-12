@@ -1,11 +1,21 @@
-# Track environment for backup
-# backend/venv/
-# backend/.env
+# Local environment
+backend/.env
+!backend/.env.example
+backend/venv/
 
 # Python cache
 backend/__pycache__/
+backend/**/__pycache__/
 backend/**/*.pyc
+backend/**/*.pyo
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime databases
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
 
 # Build/cache artifacts
 backend/build/
