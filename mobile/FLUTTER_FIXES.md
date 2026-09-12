@@ -107,8 +107,8 @@ curl -X GET "http://127.0.0.1:8000/api/v1/dashboard" \
 
 Check the `.env` file in the backend:
 ```bash
-cat /home/aryan/ERP/backend/.env
-# Should show: DATABASE_URL=postgresql+psycopg://...
+awk -F= '/^[A-Z_]+=/{print $1 " is configured"}' /home/aryan/ERP/backend/.env
+# Should include DATABASE_URL without displaying its value.
 ```
 
 If using PostgreSQL, make sure it's running:

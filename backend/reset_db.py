@@ -10,11 +10,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "app"))
 
 from sqlalchemy import create_engine, text
-from app.core.config import settings
+from app.core.config import describe_database_url, settings
 from app.db.session import Base
 
 DATABASE_URL = settings.DATABASE_URL
-print(f"Using database: {DATABASE_URL}\n")
+print(f"Using database: {describe_database_url(DATABASE_URL)}\n")
 
 try:
     engine = create_engine(DATABASE_URL)

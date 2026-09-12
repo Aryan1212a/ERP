@@ -16,11 +16,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models.models import School, User, Class, Base
 from app.core.security import hash_password
-from app.core.config import settings
+from app.core.config import describe_database_url, settings
 
 # Use the database URL from settings
 DATABASE_URL = settings.DATABASE_URL
-print(f"Using database: {DATABASE_URL}")
+print(f"Using database: {describe_database_url(DATABASE_URL)}")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -166,7 +166,7 @@ def seed_database():
                 db.commit()
                 db.refresh(teacher)
                 teachers.append(teacher)
-                print(f"Created teacher: {teacher.full_name} ({teacher.email}) - Password: {password}")
+                print(f"Created teacher: {teacher.full_name} ({teacher.email}) - temporary password generated")
             else:
                 teachers.append(teacher)
 
@@ -211,7 +211,7 @@ def seed_database():
             db.commit()
             db.refresh(student)
             students_created += 1
-            print(f"Created student: {student.full_name} ({student.email}) - Password: {password} - Class: {class_id}")
+            print(f"Created student: {student.full_name} ({student.email}) - temporary password generated - Class: {class_id}")
 
         print(f"\nSeeding completed!")
         print(f"Total users created: {len(teachers) + students_created + 1}")  # +1 for admin

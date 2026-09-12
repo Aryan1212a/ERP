@@ -4,8 +4,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "app"))
 
 try:
-    from app.core.config import settings
-    print(f"Database URL: {settings.DATABASE_URL}")
+    from app.core.config import describe_database_url, settings
+    print(f"Database configured: {describe_database_url(settings.DATABASE_URL)}")
     
     from sqlalchemy import create_engine, text
     print("Creating engine...")
