@@ -1,8 +1,13 @@
 uvicorn[standard]==0.30.1
-SQLAlchemy==2.0.30
+SQLAlchemy==2.0.54
+httpx2==2.13.1
+fastapi==0.141.1
 psycopg[binary]==3.3.3
-pydantic==2.8.2
+pydantic==2.9.0
 pydantic-settings==2.4.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 PyJWT==2.8.0
+alembic==1.13.2
+email-validator==2.3.0
+python-multipart==0.0.32
