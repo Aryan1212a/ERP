@@ -113,7 +113,7 @@ class _StudentAcademicsScreenState extends State<StudentAcademicsScreen> {
                         child: _schedule.isEmpty
                             ? const Padding(
                                 padding: EdgeInsets.all(14),
-                                child: Text('No classes scheduled today.'),
+                                child: Text('No sessions scheduled today.'),
                               )
                             : Column(
                                 children: _schedule
@@ -205,7 +205,7 @@ class _SummaryStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _SummaryCard(label: 'Classes', value: classesToday.toString())),
+        Expanded(child: _SummaryCard(label: 'Cohorts', value: classesToday.toString())),
         const SizedBox(width: 8),
         Expanded(child: _SummaryCard(label: 'Pending', value: pendingAssignments.toString())),
         const SizedBox(width: 8),

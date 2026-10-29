@@ -104,6 +104,8 @@ class _SendNoticeScreenState extends State<SendNoticeScreen> {
     try {
       final res = await Services.api.delete('/api/v1/notices/$id');
 
+      if (!mounted) return;
+
       if (res.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Deleted successfully')),
@@ -112,6 +114,7 @@ class _SendNoticeScreenState extends State<SendNoticeScreen> {
         await _loadNotices();
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Delete failed')),
       );

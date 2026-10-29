@@ -22,7 +22,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
   late final List<Widget> _pages = [
     const AdminHomeScreen(),
     const AdminUsersScreen(),
-    const AdminClassesScreen(),
+    const AdminCohortsScreen(),
     const ProfileScreen(showAppBar: false),
   ];
 
@@ -46,7 +46,7 @@ class _AdminDashboardShellState extends State<AdminDashboardShell> {
           NavigationDestination(
             selectedIcon: Icon(Icons.class_rounded),
             icon: Icon(Icons.class_outlined),
-            label: 'Classes',
+            label: 'Cohorts',
           ),
           NavigationDestination(
             selectedIcon: Icon(Icons.person_rounded),
@@ -74,7 +74,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   bool _loading = true;
   String? _error;
   List<_AdminUser> _users = [];
-  List<_AdminClass> _classes = [];
+  List<_AdminCohort> _classes = [];
   int _timetableEntries = 0;
 
   @override
@@ -110,7 +110,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             .map((item) => _AdminUser.fromJson(item as Map<String, dynamic>))
             .toList();
         _classes = classesJson
-            .map((item) => _AdminClass.fromJson(item as Map<String, dynamic>))
+            .map((item) => _AdminCohort.fromJson(item as Map<String, dynamic>))
             .toList();
         _timetableEntries = timetableJson.length;
         _loading = false;
@@ -130,7 +130,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final studentCount = _users.where((user) => user.role == 'student').length;
     final inactiveCount = _users.where((user) => !user.isActive).length;
     final passwordResetCount = _users.where((user) => user.mustChangePassword).length;
-    final unassignedClasses = _classes.where((item) => item.classTeacherName == null).length;
+    final unassignedCohorts = _classes.where((item) => item.classFacultyName == null).length;
 
     return Container(
       color: AppColors.background,
@@ -142,7 +142,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             children: [
               _AdminHeader(
                 totalUsers: _users.length,
-                totalClasses: _classes.length,
+                totalCohorts: _classes.length,
                 timetableEntries: _timetableEntries,
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -163,7 +163,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                   _QuickActionCard(
                     icon: Icons.class_rounded,
-                    label: 'Manage Classes',
+                    label: 'Manage Cohorts',
                     onTap: () => Navigator.pushNamed(context, '/admin/classes'),
                   ),
                   _QuickActionCard(
@@ -196,7 +196,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   mainAxisExtent: 148,
                   children: [
                     AppMetricCard(
-                      label: 'Teachers',
+                      label: 'Faculty',
                       value: teacherCount.toString(),
                       icon: Icons.school_rounded,
                     ),
@@ -228,8 +228,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   children: [
                     InfoTile(
                       icon: Icons.class_outlined,
-                      label: 'Classes without teacher',
-                      value: '$unassignedClasses class(es)',
+                      label: 'Cohorts without faculty',
+                      value: '$unassignedCohorts cohorts',
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     const Divider(),
@@ -253,12 +253,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 class _AdminHeader extends StatelessWidget {
   const _AdminHeader({
     required this.totalUsers,
-    required this.totalClasses,
+    required this.totalCohorts,
     required this.timetableEntries,
   });
 
   final int totalUsers;
-  final int totalClasses;
+  final int totalCohorts;
   final int timetableEntries;
 
   @override
@@ -283,7 +283,7 @@ class _AdminHeader extends StatelessWidget {
           Text('Admin Dashboard', style: theme.textTheme.headlineMedium),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Track users, classes, and timetable readiness from one place.',
+            'Track users, cohorts, and timetable readiness from one place.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textPrimary.withValues(alpha: 0.88),
             ),
@@ -294,7 +294,7 @@ class _AdminHeader extends StatelessWidget {
             runSpacing: AppSpacing.md,
             children: [
               _HeaderChip(label: '$totalUsers users'),
-              _HeaderChip(label: '$totalClasses classes'),
+              _HeaderChip(label: '$totalCohorts cohorts'),
               _HeaderChip(label: '$timetableEntries timetable blocks'),
             ],
           ),
@@ -417,16 +417,16 @@ class _AdminUser {
   }
 }
 
-class _AdminClass {
-  const _AdminClass({
-    required this.classTeacherName,
+class _AdminCohort {
+  const _AdminCohort({
+    required this.classFacultyName,
   });
 
-  final String? classTeacherName;
+  final String? classFacultyName;
 
-  factory _AdminClass.fromJson(Map<String, dynamic> json) {
-    return _AdminClass(
-      classTeacherName: json['class_teacher_name'] as String?,
+  factory _AdminCohort.fromJson(Map<String, dynamic> json) {
+    return _AdminCohort(
+      classFacultyName: json['class_teacher_name'] as String?,
     );
   }
 }

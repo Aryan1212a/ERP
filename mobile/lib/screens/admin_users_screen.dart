@@ -19,7 +19,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   String _statusFilter = 'all';
   bool _selectionMode = false;
   List<_AdminUserItem> _users = [];
-  List<_ClassItem> _classes = [];
+  List<_CohortItem> _classes = [];
   final Set<int> _busyIds = {};
   final Set<int> _selectedIds = {};
 
@@ -48,7 +48,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (!mounted) return;
       setState(() {
         _users = usersJson.map((e) => _AdminUserItem.fromJson(e as Map<String, dynamic>)).toList();
-        _classes = classesJson.map((e) => _ClassItem.fromJson(e as Map<String, dynamic>)).toList();
+        _classes = classesJson.map((e) => _CohortItem.fromJson(e as Map<String, dynamic>)).toList();
         _selectedIds.removeWhere((id) => !_users.any((user) => user.id == id));
         _loading = false;
       });
@@ -89,7 +89,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Future<void> _editUser(_AdminUserItem user) async {
     final fullNameController = TextEditingController(text: user.fullName);
     final emailController = TextEditingController(text: user.email);
-    int? selectedClassId = user.classId;
+    int? selectedCohortId = user.classId;
     bool isActive = user.isActive;
     final saved = await showDialog<bool>(
       context: context,
@@ -130,11 +130,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     if (user.role != 'admin') ...[
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int?>(
-                        initialValue: selectedClassId,
+                        initialValue: selectedCohortId,
                         items: classItems,
-                        onChanged: (value) => setModalState(() => selectedClassId = value),
+                        onChanged: (value) => setModalState(() => selectedCohortId = value),
                         decoration: InputDecoration(
-                          labelText: user.role == 'student' ? 'Class' : 'Assigned Class',
+                          labelText: user.role == 'student' ? 'Cohort' : 'Assigned Cohort',
                           border: const OutlineInputBorder(),
                         ),
                       ),
@@ -144,7 +144,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       value: isActive,
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Active account'),
-                      subtitle: const Text('Turn this off when the user leaves school but records must remain.'),
+                      subtitle: const Text('Turn this off when the user leaves the college but records must remain.'),
                       onChanged: user.role == 'admin' ? null : (value) => setModalState(() => isActive = value),
                     ),
                   ],
@@ -162,7 +162,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     final body = {
                       'full_name': fullNameController.text.trim(),
                       'email': emailController.text.trim(),
-                      'class_id': user.role == 'admin' ? null : selectedClassId,
+                      'class_id': user.role == 'admin' ? null : selectedCohortId,
                       'is_active': user.role == 'admin' ? true : isActive,
                     };
                     final res = await Services.api.put('/api/v1/admin/users/${user.id}', body);
@@ -211,31 +211,31 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     });
   }
 
-  Future<void> _transferTeacherData(_AdminUserItem user) async {
-    final candidateTeachers = _users
+  Future<void> _transferFacultyData(_AdminUserItem user) async {
+    final candidateFaculty = _users
         .where((item) => item.role == 'teacher' && item.id != user.id && item.isActive)
         .toList()
       ..sort((a, b) => a.fullName.compareTo(b.fullName));
-    if (candidateTeachers.isEmpty) {
-      _showSnack(context, 'Create or reactivate another teacher before transferring data');
+    if (candidateFaculty.isEmpty) {
+      _showSnack(context, 'Create or reactivate another faculty member before transferring data');
       return;
     }
-    int? targetTeacherId = candidateTeachers.first.id;
+    int? targetFacultyId = candidateFaculty.first.id;
     final transferred = await showDialog<bool>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) => AlertDialog(
-            title: const Text('Transfer Teacher Data'),
+            title: const Text('Transfer Faculty Data'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Move classes, assignments and marks from ${user.fullName} to:'),
+                Text('Move cohorts, assignments and marks from ${user.fullName} to:'),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
-                  initialValue: targetTeacherId,
-                  items: candidateTeachers
+                  initialValue: targetFacultyId,
+                  items: candidateFaculty
                       .map(
                         (teacher) => DropdownMenuItem<int>(
                           value: teacher.id,
@@ -243,9 +243,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         ),
                       )
                       .toList(),
-                  onChanged: (value) => setModalState(() => targetTeacherId = value),
+                  onChanged: (value) => setModalState(() => targetFacultyId = value),
                   decoration: const InputDecoration(
-                    labelText: 'Target Teacher',
+                    labelText: 'Target Faculty',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -261,7 +261,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   final navigator = Navigator.of(context);
                   final messenger = ScaffoldMessenger.of(context);
                   final res = await Services.api.post('/api/v1/admin/users/${user.id}/transfer-data', {
-                    'target_user_id': targetTeacherId,
+                    'target_user_id': targetFacultyId,
                   });
                   if (res.statusCode == 200) {
                     navigator.pop(true);
@@ -281,7 +281,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     if (transferred == true) {
       await _load();
       if (!mounted) return;
-      _showSnack(context, 'Teacher data transferred');
+      _showSnack(context, 'Faculty data transferred');
     }
   }
 
@@ -498,7 +498,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   TextField(
                     onChanged: (value) => setState(() => _searchQuery = value),
                     decoration: InputDecoration(
-                      hintText: 'Search by name, email, username, or class',
+                      hintText: 'Search by name, email, username, or cohort',
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _searchQuery.isEmpty
                           ? null
@@ -535,7 +535,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         ),
                         const SizedBox(width: 8),
                         _AdminSummaryChip(
-                          label: 'No Class',
+                          label: 'No Cohort',
                           value: unassignedCount.toString(),
                           color: const Color(0xFF2563EB),
                         ),
@@ -547,7 +547,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     segments: const [
                       ButtonSegment(value: 'all', label: Text('All')),
                       ButtonSegment(value: 'student', label: Text('Students')),
-                      ButtonSegment(value: 'teacher', label: Text('Teachers')),
+                      ButtonSegment(value: 'teacher', label: Text('Faculty')),
                     ],
                     selected: {_roleFilter},
                     onSelectionChanged: (selection) {
@@ -581,7 +581,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                         ),
                         const SizedBox(width: 8),
                         _FilterChipButton(
-                          label: 'No Class',
+                          label: 'No Cohort',
                           selected: _statusFilter == 'unassigned',
                           onTap: () => setState(() => _statusFilter = 'unassigned'),
                         ),
@@ -681,7 +681,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                                     } else if (value == 'reset') {
                                                       _resetPassword(user);
                                                     } else if (value == 'transfer') {
-                                                      _transferTeacherData(user);
+                                                      _transferFacultyData(user);
                                                     } else if (value == 'toggle') {
                                                       _toggleActive(user);
                                                     } else if (value == 'delete') {
@@ -700,7 +700,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                                     if (user.role == 'teacher')
                                                       const PopupMenuItem(
                                                         value: 'transfer',
-                                                        child: Text('Transfer Teacher Data'),
+                                                        child: Text('Transfer Faculty Data'),
                                                       ),
                                                     if (user.role != 'admin')
                                                       PopupMenuItem(
@@ -728,7 +728,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                               ),
                                               _InfoChip(label: 'Username', value: user.username ?? 'Not set'),
                                               if (user.classId != null)
-                                                _InfoChip(label: 'Class', value: className ?? 'ID ${user.classId}'),
+                                                _InfoChip(label: 'Cohort', value: className ?? 'ID ${user.classId}'),
                                               _InfoChip(
                                                 label: 'Password Change',
                                                 value: user.mustChangePassword ? 'Required' : 'Not required',
@@ -738,7 +738,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                           const SizedBox(height: 12),
                                           Text(
                                             user.role == 'teacher'
-                                                ? 'Use transfer before removal if this teacher owns classes, assignments or marks.'
+                                                ? 'Use transfer before removal if this faculty member owns cohorts, assignments or marks.'
                                                 : 'Deactivate instead of deleting when student history must remain in the ERP.',
                                             style: Theme.of(context).textTheme.bodySmall,
                                           ),
@@ -792,14 +792,14 @@ class _AdminUserItem {
   }
 }
 
-class _ClassItem {
-  _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  _CohortItem({required this.id, required this.name});
 
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(
       id: json['id'] as int,
       name: json['name'] as String,
     );

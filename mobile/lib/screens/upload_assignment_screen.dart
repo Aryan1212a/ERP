@@ -17,38 +17,38 @@ class _UploadAssignmentScreenState extends State<UploadAssignmentScreen> {
   bool _submitting = false;
   String? _error;
   DateTime _dueDate = DateTime.now();
-  List<_ClassItem> _classes = [];
-  int? _selectedClassId;
+  List<_CohortItem> _classes = [];
+  int? _selectedCohortId;
 
   @override
   void initState() {
     super.initState();
-    _loadClasses();
+    _loadCohorts();
   }
 
-  Future<void> _loadClasses() async {
+  Future<void> _loadCohorts() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final res = await Services.api.get('/api/v1/classes');
-      if (res.statusCode != 200) throw Exception('Failed to load classes');
+      if (res.statusCode != 200) throw Exception('Failed to load cohorts');
       final json = jsonDecode(res.body) as List<dynamic>;
-      _classes = json.map((e) => _ClassItem.fromJson(e)).toList();
-      _selectedClassId = _classes.isNotEmpty ? _classes.first.id : null;
+      _classes = json.map((e) => _CohortItem.fromJson(e)).toList();
+      _selectedCohortId = _classes.isNotEmpty ? _classes.first.id : null;
       setState(() => _loading = false);
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Unable to load classes';
+        _error = 'Unable to load cohorts';
       });
     }
   }
 
   Future<void> _submit() async {
-    if (_selectedClassId == null) {
-      _showSnack(context, 'Select a class');
+    if (_selectedCohortId == null) {
+      _showSnack(context, 'Select a cohort');
       return;
     }
     if (_title.text.trim().isEmpty) {
@@ -61,7 +61,7 @@ class _UploadAssignmentScreenState extends State<UploadAssignmentScreen> {
     final request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer ${Services.api.token}';
     request.headers['ngrok-skip-browser-warning'] = 'true';
-    request.fields['class_id'] = _selectedClassId.toString();
+    request.fields['class_id'] = _selectedCohortId.toString();
     request.fields['title'] = _title.text.trim();
     request.fields['description'] = _description.text.trim();
     request.fields['due_date'] = _formatDateForApi(_dueDate);
@@ -91,7 +91,7 @@ class _UploadAssignmentScreenState extends State<UploadAssignmentScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _ErrorState(message: _error!, onRetry: _loadClasses)
+                ? _ErrorState(message: _error!, onRetry: _loadCohorts)
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -105,13 +105,13 @@ class _UploadAssignmentScreenState extends State<UploadAssignmentScreen> {
                                     )),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
-                              initialValue: _selectedClassId,
+                              initialValue: _selectedCohortId,
                               items: _classes
                                   .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
                                   .toList(),
-                              onChanged: (value) => setState(() => _selectedClassId = value),
+                              onChanged: (value) => setState(() => _selectedCohortId = value),
                               decoration: const InputDecoration(
-                                labelText: 'Class',
+                                labelText: 'Cohort',
                                 border: OutlineInputBorder(),
                               ),
                             ),
@@ -198,13 +198,13 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _ClassItem {
-  _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  _CohortItem({required this.id, required this.name});
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(id: json['id'] as int, name: json['name'] as String);
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(id: json['id'] as int, name: json['name'] as String);
   }
 }
 

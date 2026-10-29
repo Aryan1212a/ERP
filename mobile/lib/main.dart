@@ -51,17 +51,17 @@ class SchoolERPApp extends StatelessWidget {
             '/login': (_) => const LoginScreen(),
             '/dashboard': (_) => const DashboardScreen(),
             '/dashboard/student': (_) => const StudentDashboardRoute(),
-            '/dashboard/teacher': (_) => const TeacherDashboardRoute(),
+            '/dashboard/teacher': (_) => const FacultyDashboardRoute(),
             '/dashboard/admin': (_) => const AdminDashboardScreen(),
             '/attendance': (_) => const AttendanceScreen(),
             '/student/attendance': (_) => const StudentAttendanceScreen(),
             '/attendance/form': (_) => const AttendanceFormScreen(),
-            '/admin/classes': (_) => const AdminClassesScreen(),
+            '/admin/classes': (_) => const AdminCohortsScreen(),
             '/admin/users': (_) => const AdminUsersScreen(),
             '/admin/users/create': (_) => const AdminCreateUserScreen(),
             '/auth/change-password': (_) => const ChangePasswordScreen(),
             '/teacher/marks/upload': (_) => const UploadMarksScreen(),
-            '/teacher/assignments/upload': (_) => const TeacherAssignmentsManageScreen(),
+            '/teacher/assignments/upload': (_) => const FacultyAssignmentsManageScreen(),
             '/timetable': (_) => const TimetableScreen(),
             '/fees': (_) => const FeesScreen(),
             '/notices': (_) => const NoticesScreen(),
@@ -69,8 +69,8 @@ class SchoolERPApp extends StatelessWidget {
             '/student/academics': (_) => const StudentAcademicsScreen(),
             '/student/schedule': (_) => const StudentScheduleScreen(),
             '/student/notices': (_) => const StudentNoticesScreen(),
-            '/teacher/assignments/manage': (_) => const TeacherAssignmentsManageScreen(),
-            '/teacher/students': (_) => const TeacherStudentsScreen(),
+            '/teacher/assignments/manage': (_) => const FacultyAssignmentsManageScreen(),
+            '/teacher/students': (_) => const FacultyStudentsScreen(),
             '/profile': (_) => const ProfileScreen(),
             '/student/assignment-detail': (context) => StudentAssignmentDetailScreen(),
           },
@@ -78,7 +78,7 @@ class SchoolERPApp extends StatelessWidget {
             if (settings.name == '/teacher/students/detail') {
               final studentId = settings.arguments as int;
               return MaterialPageRoute(
-                builder: (_) => TeacherStudentDetailScreen(studentId: studentId),
+                builder: (_) => FacultyStudentDetailScreen(studentId: studentId),
               );
             }
             return null;

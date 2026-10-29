@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 
 import '../services/service_locator.dart';
 
-class TeacherStudentDetailScreen extends StatefulWidget {
-  const TeacherStudentDetailScreen({super.key, required this.studentId});
+class FacultyStudentDetailScreen extends StatefulWidget {
+  const FacultyStudentDetailScreen({super.key, required this.studentId});
 
   final int studentId;
 
   @override
-  State<TeacherStudentDetailScreen> createState() => _TeacherStudentDetailScreenState();
+  State<FacultyStudentDetailScreen> createState() => _FacultyStudentDetailScreenState();
 }
 
-class _TeacherStudentDetailScreenState extends State<TeacherStudentDetailScreen> {
+class _FacultyStudentDetailScreenState extends State<FacultyStudentDetailScreen> {
   bool _loading = true;
   String? _error;
-  _TeacherStudentDetail? _detail;
+  _FacultyStudentDetail? _detail;
 
   @override
   void initState() {
@@ -37,7 +37,7 @@ class _TeacherStudentDetailScreenState extends State<TeacherStudentDetailScreen>
       final json = jsonDecode(res.body) as Map<String, dynamic>;
       if (!mounted) return;
       setState(() {
-        _detail = _TeacherStudentDetail.fromJson(json);
+        _detail = _FacultyStudentDetail.fromJson(json);
         _loading = false;
       });
     } catch (_) {
@@ -98,7 +98,7 @@ class _TeacherStudentDetailScreenState extends State<TeacherStudentDetailScreen>
                                           const SizedBox(height: 4),
                                           Text(detail.email),
                                           const SizedBox(height: 4),
-                                          Text(detail.className ?? 'Class not assigned'),
+                                          Text(detail.className ?? 'Cohort not assigned'),
                                         ],
                                       ),
                                     ),
@@ -200,8 +200,8 @@ class _TeacherStudentDetailScreenState extends State<TeacherStudentDetailScreen>
   }
 }
 
-class _TeacherStudentDetail {
-  _TeacherStudentDetail({
+class _FacultyStudentDetail {
+  _FacultyStudentDetail({
     required this.fullName,
     required this.email,
     required this.className,
@@ -221,8 +221,8 @@ class _TeacherStudentDetail {
   final List<_MarkItem> recentMarks;
   final List<_NoticeItem> recentNotices;
 
-  factory _TeacherStudentDetail.fromJson(Map<String, dynamic> json) {
-    return _TeacherStudentDetail(
+  factory _FacultyStudentDetail.fromJson(Map<String, dynamic> json) {
+    return _FacultyStudentDetail(
       fullName: json['full_name'] as String,
       email: json['email'] as String,
       className: json['class_name'] as String?,

@@ -416,7 +416,7 @@ class _AttendanceHeader extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Review attendance activity across your class records.',
+            'Review attendance activity across your cohorts.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.78),
             ),
@@ -762,7 +762,7 @@ String _recordTitle(Map<String, dynamic> item, String fallbackDate) {
 
   final classId = item['class_id']?.toString();
   if (classId != null && classId.isNotEmpty) {
-    return 'Class $classId';
+    return 'Cohort $classId';
   }
 
   return fallbackDate;

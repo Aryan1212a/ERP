@@ -16,9 +16,9 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
   bool _loading = true;
   String? _error;
   DateTime _date = DateTime.now();
-  List<_ClassItem> _classes = [];
+  List<_CohortItem> _classes = [];
   List<_StudentItem> _students = [];
-  int? _selectedClassId;
+  int? _selectedCohortId;
   final Map<int, String> _statusByStudent = {};
   int _studentsRequestId = 0;
 
@@ -37,17 +37,17 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
     try {
       final classesRes = await Services.api.get('/api/v1/classes');
       if (classesRes.statusCode != 200) {
-        throw Exception('Failed to load classes');
+        throw Exception('Failed to load cohorts');
       }
 
       final classesJson = jsonDecode(classesRes.body) as List<dynamic>;
       final classes = classesJson
-          .map((item) => _ClassItem.fromJson(item as Map<String, dynamic>))
+          .map((item) => _CohortItem.fromJson(item as Map<String, dynamic>))
           .toList();
 
       _classes = classes;
-      _selectedClassId = classes.isNotEmpty ? classes.first.id : null;
-      await _loadStudentsForClass();
+      _selectedCohortId = classes.isNotEmpty ? classes.first.id : null;
+      await _loadStudentsForCohort();
 
       if (!mounted) return;
       setState(() => _loading = false);
@@ -60,12 +60,12 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
     }
   }
 
-  Future<void> _loadStudentsForClass() async {
+  Future<void> _loadStudentsForCohort() async {
     final requestId = ++_studentsRequestId;
     _students = [];
     _statusByStudent.clear();
 
-    final classId = _selectedClassId;
+    final classId = _selectedCohortId;
     if (classId == null) {
       if (mounted) {
         setState(() {});
@@ -83,7 +83,7 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
         .map((item) => _StudentItem.fromJson(item as Map<String, dynamic>))
         .toList();
 
-    if (!mounted || requestId != _studentsRequestId || classId != _selectedClassId) {
+    if (!mounted || requestId != _studentsRequestId || classId != _selectedCohortId) {
       return;
     }
 
@@ -107,9 +107,9 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
   }
 
   Future<void> _submit() async {
-    final classId = _selectedClassId;
+    final classId = _selectedCohortId;
     if (classId == null) {
-      _showSnack(context, 'Please select a class');
+      _showSnack(context, 'Please select a cohort');
       return;
     }
 
@@ -172,14 +172,14 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Class & Date',
+                                  'Cohort & Date',
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 DropdownButtonFormField<int>(
-                                  initialValue: _selectedClassId,
+                                  initialValue: _selectedCohortId,
                                   items: _classes
                                       .map(
                                         (item) => DropdownMenuItem<int>(
@@ -189,11 +189,11 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                                       )
                                       .toList(),
                                   onChanged: (value) async {
-                                    setState(() => _selectedClassId = value);
-                                    await _loadStudentsForClass();
+                                    setState(() => _selectedCohortId = value);
+                                    await _loadStudentsForCohort();
                                   },
                                   decoration: const InputDecoration(
-                                    labelText: 'Class',
+                                    labelText: 'Cohort',
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.lg),
@@ -219,7 +219,7 @@ class _AttendanceFormScreenState extends State<AttendanceFormScreen> {
                                 const SizedBox(height: AppSpacing.md),
                                 if (_students.isEmpty)
                                   Text(
-                                    'No students found for this class.',
+                                    'No students found in this cohort.',
                                     style: theme.textTheme.bodySmall,
                                   )
                                 else
@@ -508,14 +508,14 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _ClassItem {
-  _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  _CohortItem({required this.id, required this.name});
 
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(
       id: json['id'] as int,
       name: json['name'] as String,
     );

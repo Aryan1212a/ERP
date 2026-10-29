@@ -6,11 +6,11 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB:-college_erp}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d school_erp"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-college_erp}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,11 +22,11 @@ services:
     container_name: college-erp-backend
     restart: unless-stopped
     environment:
-      APP_NAME: "School ERP"
+      APP_NAME: "College ERP"
       APP_ENV: "development"
       LOG_LEVEL: "INFO"
 
-      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-college_erp}"
 
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: "HS256"

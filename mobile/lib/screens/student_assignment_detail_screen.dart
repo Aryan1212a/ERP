@@ -26,10 +26,7 @@ class StudentAssignmentDetailScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Assignment'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Assignment'), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -38,10 +35,7 @@ class StudentAssignmentDetailScreen extends StatelessWidget {
             /// TITLE
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 10),
@@ -51,7 +45,7 @@ class StudentAssignmentDetailScreen extends StatelessWidget {
               children: [
                 Chip(
                   label: Text(status.toUpperCase()),
-                  backgroundColor: statusColor.withOpacity(0.2),
+                  backgroundColor: statusColor.withValues(alpha: 0.2),
                   labelStyle: TextStyle(color: statusColor),
                 ),
                 const SizedBox(width: 10),
@@ -71,10 +65,7 @@ class StudentAssignmentDetailScreen extends StatelessWidget {
 
             Expanded(
               child: SingleChildScrollView(
-                child: Text(
-                  description,
-                  style: const TextStyle(fontSize: 14),
-                ),
+                child: Text(description, style: const TextStyle(fontSize: 14)),
               ),
             ),
 

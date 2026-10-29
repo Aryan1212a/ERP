@@ -79,7 +79,7 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
                         children: const [
                           Padding(
                             padding: EdgeInsets.all(16),
-                            child: Text('No classes scheduled today.'),
+                            child: Text('No sessions scheduled today.'),
                           ),
                         ],
                       )

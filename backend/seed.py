@@ -1,230 +1,112 @@
 #!/usr/bin/env python3
-"""
-Seed script for ERP backend database.
-Creates a school and populates it with users (students and teachers).
-"""
+"""Create a small, repeatable college demo dataset."""
 
-import random
-import string
-import sys
-from pathlib import Path
+from datetime import date
 
-# Add the app directory to the path
-sys.path.insert(0, str(Path(__file__).parent / "app"))
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.models.models import School, User, Class, Base
-from app.core.security import hash_password
 from app.core.config import settings
+from app.core.security import hash_password
+from app.db.session import Base
+from app.models.models import (
+    AcademicTerm, Course, CourseOffering, Department, Enrollment, Program,
+    School, User, Class,
+)
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
-# Use the database URL from settings
-DATABASE_URL = settings.DATABASE_URL
-print(f"Using database: {DATABASE_URL}")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-print("Database tables created/ensured")
+def seed_database() -> None:
+    engine = create_engine(settings.DATABASE_URL)
+    Base.metadata.create_all(bind=engine)
 
-# Sample data
-FIRST_NAMES = [
-    "Aarav", "Vihaan", "Vivaan", "Ananya", "Diya", "Saanvi", "Pari", "Anika",
-    "Navya", "Aadhya", "Aaradhya", "Siya", "Aanya", "Pihu", "Riya", "Ira",
-    "Sahana", "Anvi", "Kiara", "Eva", "Myra", "Sara", "Zara", "Amaira",
-    "Aadhira", "Advika", "Ahana", "Amaya", "Anaya", "Aradhya", "Avni", "Bhoomi",
-    "Charvi", "Devanshi", "Divya", "Esha", "Gauri", "Hiya", "Isha", "Jiya",
-    "Kavya", "Khushi", "Kiara", "Lavanya", "Mahika", "Manvi", "Mira", "Nandini",
-    "Neha", "Nisha", "Pavithra", "Prisha", "Rhea", "Ridhi", "Riya", "Saanvi",
-    "Samantha", "Sara", "Shreya", "Sia", "Simran", "Sneha", "Soha", "Sonia",
-    "Tanya", "Tara", "Trisha", "Vani", "Veda", "Vidya", "Yashvi", "Zoya"
-]
+    with Session(engine) as db:
+        college = db.query(School).filter_by(name="Demo College").first()
+        if college is None:
+            college = School(name="Demo College")
+            db.add(college)
+            db.flush()
 
-LAST_NAMES = [
-    "Sharma", "Verma", "Gupta", "Singh", "Kumar", "Patel", "Jain", "Agarwal",
-    "Reddy", "Nair", "Chatterjee", "Banerjee", "Das", "Mukherjee", "Saha",
-    "Roy", "Chakraborty", "Ghosh", "Dutta", "Sengupta", "Bose", "Mitra",
-    "Chaudhuri", "Ganguly", "Bhattacharjee", "Sarkar", "Pal", "Debnath",
-    "Mondal", "Paul", "Karmakar", "Naskar", "Biswas", "Chakrabarti", "Majumdar"
-]
+        department_data = [("Computer Science", "CS"), ("Business Administration", "BUS")]
+        departments = {}
+        for name, code in department_data:
+            item = db.query(Department).filter_by(school_id=college.id, code=code).first()
+            if item is None:
+                item = Department(school_id=college.id, name=name, code=code)
+                db.add(item)
+                db.flush()
+            departments[code] = item
 
-TEACHER_FIRST_NAMES = [
-    "Dr. Rajesh", "Prof. Priya", "Mr. Amit", "Ms. Sunita", "Dr. Vikram",
-    "Prof. Meera", "Mr. Sanjay", "Ms. Kavita", "Dr. Arjun", "Prof. Anjali",
-    "Mr. Rohit", "Ms. Neha", "Dr. Karan", "Prof. Pooja", "Mr. Manoj",
-    "Ms. Ritu", "Dr. Sameer", "Prof. Divya", "Mr. Naveen", "Ms. Swati"
-]
+        program_data = [("BSc Computer Science", "BSCS", "CS"), ("BBA", "BBA", "BUS")]
+        for name, code, department_code in program_data:
+            if not db.query(Program).filter_by(school_id=college.id, code=code).first():
+                db.add(Program(school_id=college.id, department_id=departments[department_code].id,
+                               name=name, code=code, duration_years=4))
 
-CLASS_NAMES = [
-    "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6",
-    "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"
-]
+        course_data = [("CS101", "Programming Fundamentals", "CS"),
+                       ("CS201", "Database Systems", "CS"),
+                       ("BUS101", "Principles of Management", "BUS")]
+        courses = {}
+        for code, title, department_code in course_data:
+            item = db.query(Course).filter_by(school_id=college.id, code=code).first()
+            if item is None:
+                item = Course(school_id=college.id, department_id=departments[department_code].id,
+                              code=code, title=title, credits=3)
+                db.add(item)
+                db.flush()
+            courses[code] = item
 
-def generate_email(first_name: str, last_name: str, role: str, counter: int = None) -> str:
-    """Generate a unique email address."""
-    # Clean up names (remove trailing periods)
-    first_name = first_name.rstrip('.')
-    last_name = last_name.rstrip('.')
-    
-    base = f"{first_name.lower()}{last_name.lower()}"
-    if counter:
-        base += f"{counter}"
-    base += "@school.edu"
-    return base
+        term = db.query(AcademicTerm).filter_by(school_id=college.id, name="Fall 2026").first()
+        if term is None:
+            term = AcademicTerm(school_id=college.id, name="Fall 2026",
+                                starts_on=date(2026, 8, 1), ends_on=date(2026, 12, 20))
+            db.add(term)
+            db.flush()
 
-def generate_username(first_name: str, last_name: str, role: str, counter: int = None) -> str:
-    """Generate a unique username."""
-    # Clean up names (remove trailing periods)
-    first_name = first_name.rstrip('.')
-    last_name = last_name.rstrip('.')
-    
-    base = f"{first_name.lower()}{last_name.lower()}"
-    if counter:
-        base += f"{counter}"
-    if role == "teacher":
-        base = f"teacher_{base}"
-    return base
+        # The legacy class endpoints remain available during the API transition.
+        cohort = db.query(Class).filter_by(school_id=college.id, name="Year 1 Cohort A").first()
+        if cohort is None:
+            cohort = Class(school_id=college.id, name="Year 1 Cohort A")
+            db.add(cohort)
+            db.flush()
 
-def generate_password() -> str:
-    """Generate a random password."""
-    chars = string.ascii_letters + string.digits
-    return ''.join(random.choice(chars) for _ in range(8))
+        admin = db.query(User).filter_by(email="admin@college.edu").first()
+        if admin is None:
+            db.add(User(school_id=college.id, email="admin@college.edu", full_name="College Administrator",
+                        username="admin", password_hash=hash_password("admin123"), role="admin",
+                        must_change_password=False))
 
-def seed_database():
-    """Seed the database with sample data."""
-    db: Session = SessionLocal()
-    try:
-        # Check if school already exists
-        school = db.query(School).first()
-        if not school:
-            school = School(name="Demo School")
-            db.add(school)
-            db.commit()
-            db.refresh(school)
-            print(f"Created school: {school.name}")
-        else:
-            print(f"Using existing school: {school.name}")
+        faculty = db.query(User).filter_by(email="faculty@college.edu").first()
+        if faculty is None:
+            faculty = User(school_id=college.id, email="faculty@college.edu", full_name="Dr. Asha Rao",
+                           username="faculty_asha", password_hash=hash_password("faculty123"),
+                           role="teacher", class_id=cohort.id, must_change_password=False)
+            db.add(faculty)
+            db.flush()
+        cohort.class_teacher_id = faculty.id
 
-        # Create classes
-        classes = []
-        for class_name in CLASS_NAMES:
-            class_obj = db.query(Class).filter_by(name=class_name, school_id=school.id).first()
-            if not class_obj:
-                class_obj = Class(name=class_name, school_id=school.id)
-                db.add(class_obj)
-                db.commit()
-                db.refresh(class_obj)
-                print(f"Created class: {class_obj.name}")
-            classes.append(class_obj)
-
-        # Create admin user
-        admin = db.query(User).filter_by(email="admin@school.edu").first()
-        if not admin:
-            admin = User(
-                school_id=school.id,
-                email="admin@school.edu",
-                full_name="School Administrator",
-                username="admin",
-                password_hash=hash_password("admin123"),
-                role="admin",
-                must_change_password=False
-            )
-            db.add(admin)
-            db.commit()
-            db.refresh(admin)
-            print(f"Created admin user: {admin.email}")
-
-        # Create teachers
-        teachers = []
-        for i, teacher_name in enumerate(TEACHER_FIRST_NAMES):
-            # Extract title and first name, then add a random last name
-            parts = teacher_name.split()
-            title = parts[0] if len(parts) > 0 else ""  # Dr., Prof., Mr., Ms.
-            first_name = parts[1] if len(parts) > 1 else parts[0]
-            last_name = random.choice(LAST_NAMES)
-            
-            # Store display name with title
-            display_name = f"{title} {first_name} {last_name}"
-
-            email = generate_email(first_name, last_name, "teacher", i+1 if i > 0 else None)
-            username = generate_username(first_name, last_name, "teacher", i+1 if i > 0 else None)
-
-            teacher = db.query(User).filter_by(email=email).first()
-            if not teacher:
-                password = generate_password()
-                teacher = User(
-                    school_id=school.id,
-                    email=email,
-                    full_name=display_name,
-                    username=username,
-                    password_hash=hash_password(password),
-                    role="teacher",
-                    must_change_password=True
-                )
-                db.add(teacher)
-                db.commit()
-                db.refresh(teacher)
-                teachers.append(teacher)
-                print(f"Created teacher: {teacher.full_name} ({teacher.email}) - Password: {password}")
-            else:
-                teachers.append(teacher)
-
-        # Assign teachers as class teachers
-        for i, class_obj in enumerate(classes):
-            if i < len(teachers):
-                class_obj.class_teacher_id = teachers[i].id
-                teachers[i].class_id = class_obj.id
-                db.commit()
-                print(f"Assigned {teachers[i].full_name} as teacher for {class_obj.name}")
-
-        # Create students
-        students_created = 0
-        target_students = 33
-
-        while students_created < target_students:
-            first_name = random.choice(FIRST_NAMES)
-            last_name = random.choice(LAST_NAMES)
-            email = generate_email(first_name, last_name, "student", students_created+1 if students_created > 0 else None)
-            username = generate_username(first_name, last_name, "student", students_created+1 if students_created > 0 else None)
-
-            # Check if user already exists
-            existing = db.query(User).filter_by(email=email).first()
-            if existing:
-                continue
-
-            # Assign to a random class
-            class_id = random.choice(classes).id if classes else None
-
-            password = generate_password()
-            student = User(
-                school_id=school.id,
-                email=email,
-                full_name=f"{first_name} {last_name}",
-                username=username,
-                password_hash=hash_password(password),
-                role="student",
-                class_id=class_id,
-                must_change_password=True
-            )
+        student = db.query(User).filter_by(email="student@college.edu").first()
+        if student is None:
+            student = User(school_id=college.id, email="student@college.edu", full_name="Aarav Sharma",
+                           username="aarav.sharma", password_hash=hash_password("student123"),
+                           role="student", class_id=cohort.id, must_change_password=False)
             db.add(student)
-            db.commit()
-            db.refresh(student)
-            students_created += 1
-            print(f"Created student: {student.full_name} ({student.email}) - Password: {password} - Class: {class_id}")
+            db.flush()
 
-        print(f"\nSeeding completed!")
-        print(f"Total users created: {len(teachers) + students_created + 1}")  # +1 for admin
-        print(f"Teachers: {len(teachers)}")
-        print(f"Students: {students_created}")
-        print(f"Admin: 1")
+        for code, course in courses.items():
+            offering = db.query(CourseOffering).filter_by(
+                school_id=college.id, course_id=course.id, term_id=term.id, section="A"
+            ).first()
+            if offering is None:
+                offering = CourseOffering(school_id=college.id, course_id=course.id, term_id=term.id,
+                                          faculty_id=faculty.id, section="A", room="Block A")
+                db.add(offering)
+                db.flush()
+            if not db.query(Enrollment).filter_by(offering_id=offering.id, student_id=student.id).first():
+                db.add(Enrollment(offering_id=offering.id, student_id=student.id))
 
-    except Exception as e:
-        db.rollback()
-        print(f"Error during seeding: {e}")
-        raise
-    finally:
-        db.close()
+        db.commit()
+    print(f"Seeded college data in {settings.DATABASE_URL}")
+    print("Demo logins: admin@college.edu / admin123, faculty@college.edu / faculty123, student@college.edu / student123")
+
 
 if __name__ == "__main__":
     seed_database()

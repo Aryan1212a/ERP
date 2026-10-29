@@ -17,10 +17,10 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
   bool _submitting = false;
   String? _error;
   DateTime _date = DateTime.now();
-  List<_ClassItem> _classes = [];
+  List<_CohortItem> _classes = [];
   List<_TimetableItem> _timetableItems = [];
   List<_StudentItem> _students = [];
-  int? _selectedClassId;
+  int? _selectedCohortId;
   String _assessmentType = 'test';
   List<String> _subjects = [];
   final Map<int, String> _marks = {};
@@ -53,9 +53,9 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
       if (responses.any((res) => res.statusCode != 200)) throw Exception('Failed to load data');
       final json = jsonDecode(responses[0].body) as List<dynamic>;
       final timetableJson = jsonDecode(responses[1].body) as List<dynamic>;
-      _classes = json.map((e) => _ClassItem.fromJson(e)).toList();
+      _classes = json.map((e) => _CohortItem.fromJson(e)).toList();
       _timetableItems = timetableJson.map((e) => _TimetableItem.fromJson(e as Map<String, dynamic>)).toList();
-      _selectedClassId = _classes.isNotEmpty ? _classes.first.id : null;
+      _selectedCohortId = _classes.isNotEmpty ? _classes.first.id : null;
       _syncSubjects();
       await _loadStudents();
       if (!mounted) return;
@@ -74,13 +74,13 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
     _students = [];
     _marks.clear();
     _maxMarks.clear();
-    if (_selectedClassId == null) return;
-    final classId = _selectedClassId;
+    if (_selectedCohortId == null) return;
+    final classId = _selectedCohortId;
     final res = await Services.api.get('/api/v1/students?class_id=$classId');
     if (res.statusCode != 200) throw Exception('Failed to load students');
     final json = jsonDecode(res.body) as List<dynamic>;
     final students = json.map((e) => _StudentItem.fromJson(e)).toList();
-    if (!mounted || requestId != _studentsRequestId || classId != _selectedClassId) return;
+    if (!mounted || requestId != _studentsRequestId || classId != _selectedCohortId) return;
     _students = students;
     for (final s in students) {
       _marks[s.id] = '';
@@ -89,7 +89,7 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
   }
 
   void _syncSubjects() {
-    final classId = _selectedClassId;
+    final classId = _selectedCohortId;
     final subjects = _timetableItems
         .where((item) => classId != null && item.classId == classId)
         .map((item) => item.subject)
@@ -105,8 +105,8 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
   }
 
   Future<void> _submit() async {
-    if (_selectedClassId == null) {
-      _showSnack(context, 'Select a class');
+    if (_selectedCohortId == null) {
+      _showSnack(context, 'Select a cohort');
       return;
     }
     if (_assessmentName.text.trim().isEmpty) {
@@ -136,7 +136,7 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
 
     setState(() => _submitting = true);
     final res = await Services.api.post('/api/v1/teacher/marks', {
-      'class_id': _selectedClassId,
+      'class_id': _selectedCohortId,
       'subject': _subject.text.trim(),
       'assessment_type': _assessmentType,
       'assessment_name': _assessmentName.text.trim(),
@@ -179,18 +179,18 @@ class _UploadMarksScreenState extends State<UploadMarksScreen> {
                                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
-                              initialValue: _selectedClassId,
+                              initialValue: _selectedCohortId,
                               items: _classes
                                   .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
                                   .toList(),
                               onChanged: (value) async {
-                                setState(() => _selectedClassId = value);
+                                setState(() => _selectedCohortId = value);
                                 _syncSubjects();
                                 await _loadStudents();
                                 setState(() {});
                               },
                               decoration: const InputDecoration(
-                                labelText: 'Class',
+                                labelText: 'Cohort',
                                 border: OutlineInputBorder(),
                               ),
                             ),
@@ -368,13 +368,13 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-class _ClassItem {
-  _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  _CohortItem({required this.id, required this.name});
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(id: json['id'] as int, name: json['name'] as String);
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(id: json['id'] as int, name: json['name'] as String);
   }
 }
 

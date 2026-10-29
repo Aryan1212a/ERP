@@ -5,7 +5,7 @@ import datetime as dt
 
 
 class School(Base):
-    __tablename__ = "schools"
+    __tablename__ = "colleges"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
@@ -18,12 +18,97 @@ class School(Base):
     notices = relationship("Notice", back_populates="school")
     assignments = relationship("Assignment", back_populates="school")
     marks = relationship("Mark", back_populates="school")
+    departments = relationship("Department", back_populates="school")
+    programs = relationship("Program", back_populates="school")
+    courses = relationship("Course", back_populates="school")
+    academic_terms = relationship("AcademicTerm", back_populates="school")
+    course_offerings = relationship("CourseOffering", back_populates="school")
+
+
+class Department(Base):
+    __tablename__ = "departments"
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
+    name = Column(String(150), nullable=False)
+    code = Column(String(20), nullable=False)
+
+    school = relationship("School", back_populates="departments")
+    programs = relationship("Program", back_populates="department")
+    courses = relationship("Course", back_populates="department")
+
+
+class Program(Base):
+    __tablename__ = "programs"
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(150), nullable=False)
+    code = Column(String(20), nullable=False)
+    duration_years = Column(Integer, nullable=False)
+
+    school = relationship("School", back_populates="programs")
+    department = relationship("Department", back_populates="programs")
+
+
+class Course(Base):
+    __tablename__ = "courses"
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
+    department_id = Column(Integer, ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
+    code = Column(String(20), nullable=False)
+    title = Column(String(200), nullable=False)
+    credits = Column(Integer, nullable=False, default=3)
+
+    school = relationship("School", back_populates="courses")
+    department = relationship("Department", back_populates="courses")
+    offerings = relationship("CourseOffering", back_populates="course")
+
+
+class AcademicTerm(Base):
+    __tablename__ = "academic_terms"
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
+    name = Column(String(80), nullable=False)
+    starts_on = Column(Date, nullable=False)
+    ends_on = Column(Date, nullable=False)
+
+    school = relationship("School", back_populates="academic_terms")
+    offerings = relationship("CourseOffering", back_populates="term")
+
+
+class CourseOffering(Base):
+    __tablename__ = "course_offerings"
+    id = Column(Integer, primary_key=True, index=True)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    term_id = Column(Integer, ForeignKey("academic_terms.id", ondelete="CASCADE"), nullable=False)
+    faculty_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    section = Column(String(20), nullable=False, default="A")
+    room = Column(String(50), nullable=True)
+
+    school = relationship("School", back_populates="course_offerings")
+    course = relationship("Course", back_populates="offerings")
+    term = relationship("AcademicTerm", back_populates="offerings")
+    enrollments = relationship("Enrollment", back_populates="offering", cascade="all, delete-orphan")
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+    __table_args__ = (UniqueConstraint("offering_id", "student_id", name="uq_enrollment_offering_student"),)
+    id = Column(Integer, primary_key=True, index=True)
+    offering_id = Column(Integer, ForeignKey("course_offerings.id", ondelete="CASCADE"), index=True, nullable=False)
+    student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    enrolled_at = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
+    status = Column(String(20), nullable=False, default="enrolled")
+
+    offering = relationship("CourseOffering", back_populates="enrollments")
+    student = relationship("User")
 
 
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
     full_name = Column(String(255), nullable=False)
     username = Column(String(64), unique=True, index=True, nullable=True)
@@ -50,7 +135,7 @@ class User(Base):
 class Class(Base):
     __tablename__ = "classes"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     name = Column(String(100), nullable=False)
     class_teacher_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
@@ -70,7 +155,7 @@ class Attendance(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     date = Column(Date, nullable=False)
@@ -84,7 +169,7 @@ class Attendance(Base):
 class Timetable(Base):
     __tablename__ = "timetable"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
     day_of_week = Column(Integer, nullable=False)
     period = Column(Integer, nullable=False)
@@ -97,7 +182,7 @@ class Timetable(Base):
 class Fee(Base):
     __tablename__ = "fees"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     amount = Column(Integer, nullable=False)
     due_date = Column(Date, nullable=False)
@@ -110,7 +195,7 @@ class Fee(Base):
 class Notice(Base):
     __tablename__ = "notices"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     title = Column(String(255), nullable=False)
     body = Column(Text, nullable=False)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
@@ -135,7 +220,7 @@ class NoticeRead(Base):
 class Assignment(Base):
     __tablename__ = "assignments"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     teacher_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(255), nullable=False)
@@ -169,7 +254,7 @@ class AssignmentSubmission(Base):
 class Mark(Base):
     __tablename__ = "marks"
     id = Column(Integer, primary_key=True, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id", ondelete="CASCADE"), index=True, nullable=False)
+    school_id = Column(Integer, ForeignKey("colleges.id", ondelete="CASCADE"), index=True, nullable=False)
     teacher_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)

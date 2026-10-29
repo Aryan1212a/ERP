@@ -8,8 +8,8 @@ import '../services/service_locator.dart';
 import '../ui/app_components.dart';
 import '../ui/app_theme.dart';
 
-class TeacherAssignmentsManageScreen extends StatefulWidget {
-  const TeacherAssignmentsManageScreen({
+class FacultyAssignmentsManageScreen extends StatefulWidget {
+  const FacultyAssignmentsManageScreen({
     super.key,
     this.showScaffold = true,
   });
@@ -17,10 +17,10 @@ class TeacherAssignmentsManageScreen extends StatefulWidget {
   final bool showScaffold;
 
   @override
-  State<TeacherAssignmentsManageScreen> createState() => _TeacherAssignmentsManageScreenState();
+  State<FacultyAssignmentsManageScreen> createState() => _FacultyAssignmentsManageScreenState();
 }
 
-class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManageScreen> {
+class _FacultyAssignmentsManageScreenState extends State<FacultyAssignmentsManageScreen> {
   final _title = TextEditingController();
   final _description = TextEditingController();
 
@@ -28,9 +28,9 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
   bool _submitting = false;
   String? _error;
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
-  List<_ClassItem> _classes = [];
+  List<_CohortItem> _classes = [];
   List<_AssignmentItem> _items = [];
-  int? _selectedClassId;
+  int? _selectedCohortId;
   PlatformFile? _selectedFile;
   final Set<int> _deletingAssignments = {};
 
@@ -68,9 +68,9 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
       if (!mounted) return;
       setState(() {
         _classes = classesJson
-            .map((item) => _ClassItem.fromJson(item as Map<String, dynamic>))
+            .map((item) => _CohortItem.fromJson(item as Map<String, dynamic>))
             .toList();
-        _selectedClassId ??= _classes.isNotEmpty ? _classes.first.id : null;
+        _selectedCohortId ??= _classes.isNotEmpty ? _classes.first.id : null;
         _items = (manageJson['assignments'] as List<dynamic>)
             .map((item) => _AssignmentItem.fromJson(item as Map<String, dynamic>))
             .toList();
@@ -106,8 +106,8 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
   }
 
   Future<void> _submit() async {
-    if (_selectedClassId == null) {
-      _showSnack('Select a class');
+    if (_selectedCohortId == null) {
+      _showSnack('Select a cohort');
       return;
     }
     if (_title.text.trim().isEmpty) {
@@ -122,7 +122,7 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
       final request = http.MultipartRequest('POST', uri);
       request.headers['Authorization'] = 'Bearer ${Services.api.token}';
       request.headers['ngrok-skip-browser-warning'] = 'true';
-      request.fields['class_id'] = _selectedClassId.toString();
+      request.fields['class_id'] = _selectedCohortId.toString();
       request.fields['title'] = _title.text.trim();
       request.fields['description'] = _description.text.trim();
       request.fields['due_date'] = _formatDateForApi(_dueDate);
@@ -286,13 +286,13 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
             ],
             _ComposerCard(
               classes: _classes,
-              selectedClassId: _selectedClassId,
+              selectedCohortId: _selectedCohortId,
               titleController: _title,
               descriptionController: _description,
               dueDate: _dueDate,
               selectedFile: _selectedFile,
               submitting: _submitting,
-              onClassChanged: (value) => setState(() => _selectedClassId = value),
+              onCohortChanged: (value) => setState(() => _selectedCohortId = value),
               onPickDate: _pickDueDate,
               onPickFile: _pickFile,
               onClearFile: () => setState(() => _selectedFile = null),
@@ -321,7 +321,7 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
             else if (_items.isEmpty)
               const AppStateCard(
                 title: 'No assignments yet',
-                message: 'Create your first assignment to publish work for your class.',
+                message: 'Create your first assignment to publish work for your cohort.',
                 icon: Icons.assignment_outlined,
               )
             else
@@ -346,7 +346,7 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Teacher Assignments')),
+      appBar: AppBar(title: const Text('Faculty Assignments')),
       body: body,
     );
   }
@@ -355,27 +355,27 @@ class _TeacherAssignmentsManageScreenState extends State<TeacherAssignmentsManag
 class _ComposerCard extends StatelessWidget {
   const _ComposerCard({
     required this.classes,
-    required this.selectedClassId,
+    required this.selectedCohortId,
     required this.titleController,
     required this.descriptionController,
     required this.dueDate,
     required this.selectedFile,
     required this.submitting,
-    required this.onClassChanged,
+    required this.onCohortChanged,
     required this.onPickDate,
     required this.onPickFile,
     required this.onClearFile,
     required this.onSubmit,
   });
 
-  final List<_ClassItem> classes;
-  final int? selectedClassId;
+  final List<_CohortItem> classes;
+  final int? selectedCohortId;
   final TextEditingController titleController;
   final TextEditingController descriptionController;
   final DateTime dueDate;
   final PlatformFile? selectedFile;
   final bool submitting;
-  final ValueChanged<int?> onClassChanged;
+  final ValueChanged<int?> onCohortChanged;
   final VoidCallback onPickDate;
   final VoidCallback onPickFile;
   final VoidCallback onClearFile;
@@ -417,7 +417,7 @@ class _ComposerCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           DropdownButtonFormField<int>(
-            initialValue: selectedClassId,
+            initialValue: selectedCohortId,
             items: classes
                 .map(
                   (item) => DropdownMenuItem<int>(
@@ -426,8 +426,8 @@ class _ComposerCard extends StatelessWidget {
                   ),
                 )
                 .toList(),
-            onChanged: onClassChanged,
-            decoration: const InputDecoration(labelText: 'Class'),
+            onChanged: onCohortChanged,
+            decoration: const InputDecoration(labelText: 'Cohort'),
           ),
           const SizedBox(height: AppSpacing.lg),
           TextField(
@@ -542,7 +542,7 @@ class _AssignmentOverviewCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      '${assignment.className ?? "Class ${assignment.classId}"} • Due ${_formatDateLabel(assignment.dueDate)}',
+                      '${assignment.className ?? "Cohort ${assignment.classId}"} • Due ${_formatDateLabel(assignment.dueDate)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -666,14 +666,14 @@ class _AssignmentStatPill extends StatelessWidget {
   }
 }
 
-class _ClassItem {
-  const _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  const _CohortItem({required this.id, required this.name});
 
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(
       id: json['id'] as int,
       name: json['name'] as String,
     );
@@ -873,7 +873,7 @@ class _AssignmentStudentsSheetState extends State<_AssignmentStudentsSheet> {
                                   onChanged: (newStatus) async {
                                     if (newStatus == null || newStatus == student.status) return;
                                     setState(() => _updating.add(student.studentId));
-                                    final success = await widget.onStatusChanged(student.studentId, newStatus);
+                                    await widget.onStatusChanged(student.studentId, newStatus);
                                     if (mounted) {
                                       setState(() {
                                         _updating.remove(student.studentId);

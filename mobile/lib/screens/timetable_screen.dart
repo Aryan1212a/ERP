@@ -13,9 +13,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
   bool _loading = true;
   String? _error;
   List<_TimetableItem> _items = [];
-  List<_ClassItem> _classes = [];
+  List<_CohortItem> _classes = [];
   final _subject = TextEditingController();
-  int? _selectedClassId;
+  int? _selectedCohortId;
   int _dayOfWeek = 0;
   int _period = 1;
   bool _submitting = false;
@@ -49,10 +49,10 @@ class _TimetableScreenState extends State<TimetableScreen> {
       final classesJson = jsonDecode(responses[1].body) as List<dynamic>;
       if (!mounted) return;
       final classes =
-          classesJson.map((e) => _ClassItem.fromJson(e as Map<String, dynamic>)).toList();
+          classesJson.map((e) => _CohortItem.fromJson(e as Map<String, dynamic>)).toList();
       setState(() {
         _classes = classes;
-        _selectedClassId ??= classes.isNotEmpty ? classes.first.id : null;
+        _selectedCohortId ??= classes.isNotEmpty ? classes.first.id : null;
         _items = timetableJson
             .map((e) => _TimetableItem.fromJson(e as Map<String, dynamic>))
             .toList()
@@ -73,8 +73,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   Future<void> _createEntry() async {
-    if (_selectedClassId == null) {
-      _showSnack('Create a class first');
+    if (_selectedCohortId == null) {
+      _showSnack('Create a cohort first');
       return;
     }
     if (_subject.text.trim().isEmpty) {
@@ -83,7 +83,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
     setState(() => _submitting = true);
     final res = await Services.api.post('/api/v1/timetable', {
-      'class_id': _selectedClassId,
+      'class_id': _selectedCohortId,
       'day_of_week': _dayOfWeek,
       'period': _period,
       'subject': _subject.text.trim(),
@@ -107,7 +107,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
     for (final c in _classes) {
       if (c.id == classId) return c.name;
     }
-    return 'Class $classId';
+    return 'Cohort $classId';
   }
 
   @override
@@ -150,7 +150,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 DropdownButtonFormField<int>(
-                                  initialValue: _selectedClassId,
+                                  initialValue: _selectedCohortId,
                                   items: _classes
                                       .map(
                                         (c) => DropdownMenuItem(
@@ -159,9 +159,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
                                         ),
                                       )
                                       .toList(),
-                                  onChanged: (value) => setState(() => _selectedClassId = value),
+                                  onChanged: (value) => setState(() => _selectedCohortId = value),
                                   decoration: const InputDecoration(
-                                    labelText: 'Class',
+                                    labelText: 'Cohort',
                                     border: OutlineInputBorder(),
                                   ),
                                 ),
@@ -276,14 +276,14 @@ class _TimetableItem {
   }
 }
 
-class _ClassItem {
-  _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  _CohortItem({required this.id, required this.name});
 
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(
       id: json['id'] as int,
       name: json['name'] as String,
     );

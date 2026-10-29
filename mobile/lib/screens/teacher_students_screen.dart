@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../services/service_locator.dart';
 
-class TeacherStudentsScreen extends StatefulWidget {
-  const TeacherStudentsScreen({
+class FacultyStudentsScreen extends StatefulWidget {
+  const FacultyStudentsScreen({
     super.key,
     this.showScaffold = true,
   });
@@ -13,14 +13,14 @@ class TeacherStudentsScreen extends StatefulWidget {
   final bool showScaffold;
 
   @override
-  State<TeacherStudentsScreen> createState() => _TeacherStudentsScreenState();
+  State<FacultyStudentsScreen> createState() => _FacultyStudentsScreenState();
 }
 
-class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
+class _FacultyStudentsScreenState extends State<FacultyStudentsScreen> {
   bool _loading = true;
   String? _error;
   String _query = '';
-  List<_TeacherStudentListItem> _students = [];
+  List<_FacultyStudentListItem> _students = [];
 
   @override
   void initState() {
@@ -40,7 +40,7 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
       }
       final json = jsonDecode(res.body) as Map<String, dynamic>;
       final students = (json['students'] as List<dynamic>)
-          .map((e) => _TeacherStudentListItem.fromJson(e as Map<String, dynamic>))
+          .map((e) => _FacultyStudentListItem.fromJson(e as Map<String, dynamic>))
           .toList();
       if (!mounted) return;
       setState(() {
@@ -167,8 +167,8 @@ class _TeacherStudentsScreenState extends State<TeacherStudentsScreen> {
   }
 }
 
-class _TeacherStudentListItem {
-  _TeacherStudentListItem({
+class _FacultyStudentListItem {
+  _FacultyStudentListItem({
     required this.studentId,
     required this.fullName,
     required this.email,
@@ -186,8 +186,8 @@ class _TeacherStudentListItem {
   final int pendingAssignments;
   final double averageScore;
 
-  factory _TeacherStudentListItem.fromJson(Map<String, dynamic> json) {
-    return _TeacherStudentListItem(
+  factory _FacultyStudentListItem.fromJson(Map<String, dynamic> json) {
+    return _FacultyStudentListItem(
       studentId: json['student_id'] as int,
       fullName: json['full_name'] as String,
       email: json['email'] as String,

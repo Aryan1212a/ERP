@@ -20,12 +20,12 @@ class StudentDashboardRoute extends StatelessWidget {
   }
 }
 
-class TeacherDashboardRoute extends StatelessWidget {
-  const TeacherDashboardRoute({super.key});
+class FacultyDashboardRoute extends StatelessWidget {
+  const FacultyDashboardRoute({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const _TeacherShell();
+    return const _FacultyShell();
   }
 }
 
@@ -85,21 +85,21 @@ class _StudentShellState extends State<_StudentShell> {
   }
 }
 
-class _TeacherShell extends StatefulWidget {
-  const _TeacherShell();
+class _FacultyShell extends StatefulWidget {
+  const _FacultyShell();
 
   @override
-  State<_TeacherShell> createState() => _TeacherShellState();
+  State<_FacultyShell> createState() => _FacultyShellState();
 }
 
-class _TeacherShellState extends State<_TeacherShell> {
+class _FacultyShellState extends State<_FacultyShell> {
   int _selectedIndex = 0;
 
   late final List<Widget> _screens = [
-    const TeacherDashboardScreen(showNavigation: false),
+    const FacultyDashboardScreen(showNavigation: false),
     const AttendanceScreen(showBackButton: false),
-    const TeacherAssignmentsManageScreen(showScaffold: false),
-    const TeacherStudentsScreen(showScaffold: false),
+    const FacultyAssignmentsManageScreen(showScaffold: false),
+    const FacultyStudentsScreen(showScaffold: false),
     const ProfileScreen(showAppBar: false, showLogoutTile: true),
   ];
 

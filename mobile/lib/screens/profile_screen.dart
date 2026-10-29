@@ -154,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           value: profile.id.toString(),
                         ),
                         _InfoRow(
-                          label: 'School ID',
+                          label: 'College ID',
                           value: profile.schoolId.toString(),
                         ),
                         _InfoRow(
@@ -165,8 +165,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _InfoRow(label: 'Username', value: profile.username!),
                         if (profile.classId != null)
                           _InfoRow(
-                            label: 'Class',
-                            value: _className ?? 'Class ${profile.classId}',
+                            label: 'Cohort',
+                            value: _className ?? 'Cohort ${profile.classId}',
                           ),
                       ],
                     ),

@@ -57,13 +57,6 @@ class _StudentNoticesScreenState extends State<StudentNoticesScreen> {
     }
   }
 
-  void _clearNotices() {
-    setState(() {
-      _items.clear();
-      _pinnedNoticeIds.clear();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final content = SafeArea(

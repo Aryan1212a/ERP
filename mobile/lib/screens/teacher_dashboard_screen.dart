@@ -6,8 +6,8 @@ import '../services/service_locator.dart';
 import '../ui/app_components.dart';
 import '../ui/app_theme.dart';
 
-class TeacherDashboardScreen extends StatefulWidget {
-  const TeacherDashboardScreen({
+class FacultyDashboardScreen extends StatefulWidget {
+  const FacultyDashboardScreen({
     super.key,
     this.showNavigation = true,
   });
@@ -15,11 +15,11 @@ class TeacherDashboardScreen extends StatefulWidget {
   final bool showNavigation;
 
   @override
-  State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
+  State<FacultyDashboardScreen> createState() => _FacultyDashboardScreenState();
 }
 
-class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
-  _TeacherSummary? _summary;
+class _FacultyDashboardScreenState extends State<FacultyDashboardScreen> {
+  _FacultySummary? _summary;
   List<_ScheduleItem> _schedule = [];
   _StudentInsights? _insights;
   bool _loading = true;
@@ -49,7 +49,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
 
       if (!mounted) return;
       setState(() {
-        _summary = _TeacherSummary.fromJson(
+        _summary = _FacultySummary.fromJson(
           jsonDecode(responses[0].body) as Map<String, dynamic>,
         );
         _schedule = (jsonDecode(responses[1].body)['schedule'] as List<dynamic>)
@@ -64,7 +64,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Unable to load teacher dashboard';
+        _error = 'Unable to load faculty dashboard';
       });
     }
   }
@@ -78,7 +78,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              _TeacherHeader(summary: summary),
+              _FacultyHeader(summary: summary),
               const SizedBox(height: AppSpacing.xl),
               const AppSectionHeader(title: 'Quick Actions'),
               const SizedBox(height: AppSpacing.lg),
@@ -125,7 +125,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               else if (_error != null || summary == null)
                 AppStateCard(
                   title: 'Dashboard unavailable',
-                  message: _error ?? 'No teacher summary available.',
+                  message: _error ?? 'No faculty summary available.',
                   icon: Icons.error_outline_rounded,
                   action: AppButton.secondary(label: 'Retry', onPressed: _load),
                 )
@@ -134,8 +134,8 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   mainAxisExtent: 148,
                   children: [
                     AppMetricCard(
-                      label: 'Classes Today',
-                      value: '${summary.todayClasses}',
+                      label: 'Sessions Today',
+                      value: '${summary.todayCohorts}',
                       icon: Icons.class_outlined,
                     ),
                     AppMetricCard(
@@ -164,7 +164,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               AppCard(
                 child: _schedule.isEmpty
                     ? Text(
-                        _loading ? 'Loading schedule...' : 'No classes scheduled today.',
+                        _loading ? 'Loading schedule...' : 'No sessions scheduled today.',
                         style: Theme.of(context).textTheme.bodySmall,
                       )
                     : Column(
@@ -173,7 +173,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                             InfoTile(
                               icon: Icons.schedule_rounded,
                               label: item.subject,
-                              value: '${item.startTime} - ${item.endTime}  •  Class ${item.classId}',
+                              value: '${item.startTime} - ${item.endTime}  •  Cohort ${item.classId}',
                             ),
                             if (item != _schedule.last) ...[
                               const SizedBox(height: AppSpacing.lg),
@@ -216,16 +216,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Teacher Dashboard')),
+      appBar: AppBar(title: const Text('Faculty Dashboard')),
       body: content,
     );
   }
 }
 
-class _TeacherHeader extends StatelessWidget {
-  const _TeacherHeader({required this.summary});
+class _FacultyHeader extends StatelessWidget {
+  const _FacultyHeader({required this.summary});
 
-  final _TeacherSummary? summary;
+  final _FacultySummary? summary;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +246,7 @@ class _TeacherHeader extends StatelessWidget {
           Text('Teaching Overview', style: theme.textTheme.headlineMedium),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Review your classes, teaching workload, and follow-up items for today.',
+            'Review your course sessions, teaching workload, and follow-up items for today.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textPrimary.withValues(alpha: 0.88),
             ),
@@ -256,7 +256,7 @@ class _TeacherHeader extends StatelessWidget {
             spacing: AppSpacing.md,
             runSpacing: AppSpacing.md,
             children: [
-              _HeaderChip(label: '${summary?.todayClasses ?? 0} classes'),
+              _HeaderChip(label: '${summary?.todayCohorts ?? 0} sessions'),
               _HeaderChip(label: '${summary?.pendingAttendance ?? 0} pending'),
               _HeaderChip(label: '${summary?.assignmentsToReview ?? 0} to review'),
             ],
@@ -360,22 +360,22 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
-class _TeacherSummary {
-  const _TeacherSummary({
-    required this.todayClasses,
+class _FacultySummary {
+  const _FacultySummary({
+    required this.todayCohorts,
     required this.pendingAttendance,
     required this.assignmentsToReview,
     required this.lowAttendanceAlerts,
   });
 
-  final int todayClasses;
+  final int todayCohorts;
   final int pendingAttendance;
   final int assignmentsToReview;
   final int lowAttendanceAlerts;
 
-  factory _TeacherSummary.fromJson(Map<String, dynamic> json) {
-    return _TeacherSummary(
-      todayClasses: json['today_classes'] as int? ?? 0,
+  factory _FacultySummary.fromJson(Map<String, dynamic> json) {
+    return _FacultySummary(
+      todayCohorts: json['today_classes'] as int? ?? 0,
       pendingAttendance: json['pending_attendance'] as int? ?? 0,
       assignmentsToReview: json['assignments_to_review'] as int? ?? 0,
       lowAttendanceAlerts: json['low_attendance_alerts'] as int? ?? 0,
@@ -417,7 +417,7 @@ class _ScheduleItem {
 
   factory _ScheduleItem.fromJson(Map<String, dynamic> json) {
     return _ScheduleItem(
-      subject: json['subject'] as String? ?? 'Class',
+      subject: json['subject'] as String? ?? 'Cohort',
       classId: json['class_id'] as int? ?? 0,
       startTime: json['start_time'] as String? ?? '--:--',
       endTime: json['end_time'] as String? ?? '--:--',

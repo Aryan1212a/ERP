@@ -4,19 +4,19 @@ import 'package:flutter/material.dart';
 
 import '../services/service_locator.dart';
 
-class AdminClassesScreen extends StatefulWidget {
-  const AdminClassesScreen({super.key});
+class AdminCohortsScreen extends StatefulWidget {
+  const AdminCohortsScreen({super.key});
 
   @override
-  State<AdminClassesScreen> createState() => _AdminClassesScreenState();
+  State<AdminCohortsScreen> createState() => _AdminCohortsScreenState();
 }
 
-class _AdminClassesScreenState extends State<AdminClassesScreen> {
+class _AdminCohortsScreenState extends State<AdminCohortsScreen> {
   bool _loading = true;
   String? _error;
   String _searchQuery = '';
   String _classFilter = 'all';
-  List<_ClassItem> _classes = [];
+  List<_CohortItem> _classes = [];
   List<_UserItem> _teachers = [];
   List<_UserItem> _students = [];
 
@@ -45,7 +45,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
       final studentsJson = jsonDecode(responses[2].body) as List<dynamic>;
       if (!mounted) return;
       setState(() {
-        _classes = classesJson.map((e) => _ClassItem.fromJson(e as Map<String, dynamic>)).toList();
+        _classes = classesJson.map((e) => _CohortItem.fromJson(e as Map<String, dynamic>)).toList();
         _teachers = teachersJson.map((e) => _UserItem.fromJson(e as Map<String, dynamic>)).toList();
         _students = studentsJson.map((e) => _UserItem.fromJson(e as Map<String, dynamic>)).toList();
         _loading = false;
@@ -54,7 +54,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = 'Unable to load classes';
+        _error = 'Unable to load cohorts';
       });
     }
   }
@@ -67,15 +67,15 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
     return null;
   }
 
-  Future<void> _createClass() async {
+  Future<void> _createCohort() async {
     final nameController = TextEditingController();
-    int? classTeacherId;
+    int? classFacultyId;
     final created = await showDialog<bool>(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) => AlertDialog(
-            title: const Text('Create Class'),
+            title: const Text('Create Cohort'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -83,15 +83,15 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                   TextField(
                     controller: nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Class Name',
+                      labelText: 'Cohort Name',
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int?>(
-                    initialValue: classTeacherId,
+                    initialValue: classFacultyId,
                     items: [
-                      const DropdownMenuItem<int?>(value: null, child: Text('No class teacher')),
+                      const DropdownMenuItem<int?>(value: null, child: Text('No cohort faculty')),
                       ..._teachers.map(
                         (teacher) => DropdownMenuItem<int?>(
                           value: teacher.id,
@@ -99,9 +99,9 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                         ),
                       ),
                     ],
-                    onChanged: (value) => setModalState(() => classTeacherId = value),
+                    onChanged: (value) => setModalState(() => classFacultyId = value),
                     decoration: const InputDecoration(
-                      labelText: 'Class Teacher',
+                      labelText: 'Cohort Faculty',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -119,7 +119,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                   final messenger = ScaffoldMessenger.of(context);
                   final name = nameController.text.trim();
                   if (name.isEmpty) return;
-                  final body = <String, dynamic>{'name': name, 'class_teacher_id': classTeacherId};
+                  final body = <String, dynamic>{'name': name, 'class_teacher_id': classFacultyId};
                   final res = await Services.api.post('/api/v1/classes', body);
                   if (res.statusCode == 200) {
                     navigator.pop(true);
@@ -142,11 +142,11 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
     }
   }
 
-  Future<void> _manageClass(_ClassItem item) async {
+  Future<void> _manageCohort(_CohortItem item) async {
     String className = item.name;
-    final selectedTeacherIds = _teachers.where((teacher) => teacher.classId == item.id).map((e) => e.id).toSet();
+    final selectedFacultyIds = _teachers.where((teacher) => teacher.classId == item.id).map((e) => e.id).toSet();
     final selectedStudentIds = _students.where((student) => student.classId == item.id).map((e) => e.id).toSet();
-    int? selectedClassTeacherId = item.classTeacherId;
+    int? selectedCohortFacultyId = item.classFacultyId;
     String manageQuery = '';
     String manageFilter = 'all';
 
@@ -160,22 +160,22 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
               final query = manageQuery.trim().toLowerCase();
               return users.where((user) {
                 final matchesQuery = query.isEmpty || user.fullName.toLowerCase().contains(query);
-                final matchesClass = switch (manageFilter) {
+                final matchesCohort = switch (manageFilter) {
                   'assigned' => user.classId == item.id,
                   'unassigned' => user.classId == null,
                   _ => true,
                 };
-                return matchesQuery && matchesClass;
+                return matchesQuery && matchesCohort;
               }).toList();
             }
 
             Widget buildUserCheckbox(_UserItem user, Set<int> selectedIds) {
-              final currentClassName = _classNameById(user.classId);
+              final currentCohortName = _classNameById(user.classId);
               return CheckboxListTile(
                 value: selectedIds.contains(user.id),
                 contentPadding: EdgeInsets.zero,
                 title: Text(user.fullName),
-                subtitle: Text(currentClassName == null ? 'Unassigned' : 'Current: $currentClassName'),
+                subtitle: Text(currentCohortName == null ? 'Unassigned' : 'Current: $currentCohortName'),
                 onChanged: (checked) {
                   setModalState(() {
                     if (checked == true) {
@@ -201,21 +201,21 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Manage Class', style: Theme.of(context).textTheme.titleLarge),
+                      Text('Manage Cohort', style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 12),
                       TextFormField(
                         initialValue: className,
                         onChanged: (value) => className = value,
                         decoration: const InputDecoration(
-                          labelText: 'Class Name',
+                          labelText: 'Cohort Name',
                           border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int?>(
-                        initialValue: selectedClassTeacherId,
+                        initialValue: selectedCohortFacultyId,
                         items: [
-                          const DropdownMenuItem<int?>(value: null, child: Text('No class teacher')),
+                          const DropdownMenuItem<int?>(value: null, child: Text('No cohort faculty')),
                           ..._teachers.map(
                             (teacher) => DropdownMenuItem<int?>(
                               value: teacher.id,
@@ -223,9 +223,9 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                             ),
                           ),
                         ],
-                        onChanged: (value) => setModalState(() => selectedClassTeacherId = value),
+                        onChanged: (value) => setModalState(() => selectedCohortFacultyId = value),
                         decoration: const InputDecoration(
-                          labelText: 'Class Teacher',
+                          labelText: 'Cohort Faculty',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -242,7 +242,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                       SegmentedButton<String>(
                         segments: const [
                           ButtonSegment(value: 'all', label: Text('All')),
-                          ButtonSegment(value: 'assigned', label: Text('In Class')),
+                          ButtonSegment(value: 'assigned', label: Text('In Cohort')),
                           ButtonSegment(value: 'unassigned', label: Text('Unassigned')),
                         ],
                         selected: {manageFilter},
@@ -251,10 +251,10 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      Text('Teachers', style: Theme.of(context).textTheme.titleMedium),
+                      Text('Faculty', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       ...filterUsers(_teachers)
-                          .map((teacher) => buildUserCheckbox(teacher, selectedTeacherIds)),
+                          .map((teacher) => buildUserCheckbox(teacher, selectedFacultyIds)),
                       const SizedBox(height: 16),
                       Text('Students', style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
@@ -282,20 +282,20 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
 
     final normalizedName = className.trim();
     if (normalizedName.isEmpty) {
-      _showSnack('Class name is required');
+      _showSnack('Cohort name is required');
       return;
     }
 
-    if (selectedClassTeacherId != null) {
-      selectedTeacherIds.add(selectedClassTeacherId!);
+    if (selectedCohortFacultyId != null) {
+      selectedFacultyIds.add(selectedCohortFacultyId!);
     }
 
-    final currentTeacherIds = _teachers.where((teacher) => teacher.classId == item.id).map((e) => e.id).toSet();
+    final currentFacultyIds = _teachers.where((teacher) => teacher.classId == item.id).map((e) => e.id).toSet();
     final currentStudentIds = _students.where((student) => student.classId == item.id).map((e) => e.id).toSet();
 
     final classRes = await Services.api.put('/api/v1/classes/${item.id}', {
       'name': normalizedName,
-      'class_teacher_id': selectedClassTeacherId,
+      'class_teacher_id': selectedCohortFacultyId,
     });
     if (classRes.statusCode != 200) {
       _showSnack('Failed to update class');
@@ -315,7 +315,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
 
       for (final userId in toUnassign) {
         final user = allUsers.firstWhere((entry) => entry.id == userId);
-        if (user.id == selectedClassTeacherId) {
+        if (user.id == selectedCohortFacultyId) {
           continue;
         }
         final res = await Services.api.put('/api/v1/admin/users/$userId/class-assignment', {
@@ -327,7 +327,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
       return true;
     }
 
-    final teachersOk = await syncAssignments(selectedTeacherIds, currentTeacherIds, _teachers);
+    final teachersOk = await syncAssignments(selectedFacultyIds, currentFacultyIds, _teachers);
     if (!teachersOk) {
       _showSnack('Failed to update teacher assignments');
       return;
@@ -339,14 +339,14 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
     }
 
     await _load();
-    _showSnack('Class updated');
+    _showSnack('Cohort updated');
   }
 
-  Future<void> _deleteClass(_ClassItem item) async {
+  Future<void> _deleteCohort(_CohortItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Class'),
+        title: const Text('Delete Cohort'),
         content: Text('Delete ${item.name}? This will fail if users or records are still assigned.'),
         actions: [
           TextButton(
@@ -366,7 +366,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
     if (!mounted) return;
     if (res.statusCode == 200) {
       await _load();
-      _showSnack('Class deleted');
+      _showSnack('Cohort deleted');
       return;
     }
     String message = 'Failed to delete class';
@@ -386,30 +386,30 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
   @override
   Widget build(BuildContext context) {
     final normalizedQuery = _searchQuery.trim().toLowerCase();
-    final visibleClasses = _classes.where((item) {
+    final visibleCohorts = _classes.where((item) {
       final teacherCount = _teachers.where((teacher) => teacher.classId == item.id).length;
       final studentCount = _students.where((student) => student.classId == item.id).length;
       final matchesQuery = normalizedQuery.isEmpty ||
           item.name.toLowerCase().contains(normalizedQuery) ||
-          (item.classTeacherName?.toLowerCase().contains(normalizedQuery) ?? false);
+          (item.classFacultyName?.toLowerCase().contains(normalizedQuery) ?? false);
       final matchesFilter = switch (_classFilter) {
-        'unassigned' => item.classTeacherName == null,
+        'unassigned' => item.classFacultyName == null,
         'empty' => studentCount == 0,
         'staffed' => teacherCount > 0,
         _ => true,
       };
       return matchesQuery && matchesFilter;
     }).toList();
-    final unassignedCount = _classes.where((item) => item.classTeacherName == null).length;
+    final unassignedCount = _classes.where((item) => item.classFacultyName == null).length;
     final emptyCount = _classes.where((item) => _students.where((student) => student.classId == item.id).isEmpty).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Manage Classes')),
+      appBar: AppBar(title: const Text('Manage Cohorts')),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'admin_classes_fab',
-        onPressed: _createClass,
+        onPressed: _createCohort,
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Class'),
+        label: const Text('Add Cohort'),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -434,7 +434,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                         TextField(
                           onChanged: (value) => setState(() => _searchQuery = value),
                           decoration: InputDecoration(
-                            hintText: 'Search classes or class teachers',
+                            hintText: 'Search cohorts or class teachers',
                             prefixIcon: const Icon(Icons.search_rounded),
                             suffixIcon: _searchQuery.isEmpty
                                 ? null
@@ -453,15 +453,15 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              _ClassSummaryChip(label: 'Classes', value: _classes.length.toString()),
+                              _CohortSummaryChip(label: 'Cohorts', value: _classes.length.toString()),
                               const SizedBox(width: 8),
-                              _ClassSummaryChip(
-                                label: 'Needs Teacher',
+                              _CohortSummaryChip(
+                                label: 'Needs Faculty',
                                 value: unassignedCount.toString(),
                                 color: const Color(0xFFF59E0B),
                               ),
                               const SizedBox(width: 8),
-                              _ClassSummaryChip(
+                              _CohortSummaryChip(
                                 label: 'Empty',
                                 value: emptyCount.toString(),
                                 color: const Color(0xFF2563EB),
@@ -474,25 +474,25 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              _ClassFilterChip(
+                              _CohortFilterChip(
                                 label: 'All',
                                 selected: _classFilter == 'all',
                                 onTap: () => setState(() => _classFilter = 'all'),
                               ),
                               const SizedBox(width: 8),
-                              _ClassFilterChip(
-                                label: 'No Teacher',
+                              _CohortFilterChip(
+                                label: 'No Faculty',
                                 selected: _classFilter == 'unassigned',
                                 onTap: () => setState(() => _classFilter = 'unassigned'),
                               ),
                               const SizedBox(width: 8),
-                              _ClassFilterChip(
+                              _CohortFilterChip(
                                 label: 'No Students',
                                 selected: _classFilter == 'empty',
                                 onTap: () => setState(() => _classFilter = 'empty'),
                               ),
                               const SizedBox(width: 8),
-                              _ClassFilterChip(
+                              _CohortFilterChip(
                                 label: 'Has Staff',
                                 selected: _classFilter == 'staffed',
                                 onTap: () => setState(() => _classFilter = 'staffed'),
@@ -504,15 +504,15 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                         if (_classes.isEmpty)
                           const Padding(
                             padding: EdgeInsets.only(bottom: 12),
-                            child: Text('No classes available yet.'),
+                            child: Text('No cohorts available yet.'),
                           )
-                        else if (visibleClasses.isEmpty)
+                        else if (visibleCohorts.isEmpty)
                           const Padding(
                             padding: EdgeInsets.only(bottom: 12),
-                            child: Text('No classes match the current search and filters.'),
+                            child: Text('No cohorts match the current search and filters.'),
                           )
                         else
-                          ...visibleClasses.map((item) {
+                          ...visibleCohorts.map((item) {
                             final teacherCount =
                                 _teachers.where((teacher) => teacher.classId == item.id).length;
                             final studentCount =
@@ -537,7 +537,7 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                                             ),
                                           ),
                                           OutlinedButton(
-                                            onPressed: () => _manageClass(item),
+                                            onPressed: () => _manageCohort(item),
                                             style: OutlinedButton.styleFrom(
                                               minimumSize: const Size(0, 40),
                                             ),
@@ -546,23 +546,23 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
                                           const SizedBox(width: 8),
                                           IconButton(
                                             tooltip: 'Delete class',
-                                            onPressed: () => _deleteClass(item),
+                                            onPressed: () => _deleteCohort(item),
                                             icon: const Icon(Icons.delete_outline_rounded),
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        item.classTeacherName == null
-                                            ? 'Class Teacher: Not assigned'
-                                            : 'Class Teacher: ${item.classTeacherName}',
+                                        item.classFacultyName == null
+                                            ? 'Cohort Faculty: Not assigned'
+                                            : 'Cohort Faculty: ${item.classFacultyName}',
                                       ),
                                       const SizedBox(height: 12),
                                       Wrap(
                                         spacing: 8,
                                         runSpacing: 8,
                                         children: [
-                                          _CountChip(label: 'Teachers', count: teacherCount),
+                                          _CountChip(label: 'Faculty', count: teacherCount),
                                           _CountChip(label: 'Students', count: studentCount),
                                         ],
                                       ),
@@ -580,25 +580,25 @@ class _AdminClassesScreenState extends State<AdminClassesScreen> {
   }
 }
 
-class _ClassItem {
-  _ClassItem({
+class _CohortItem {
+  _CohortItem({
     required this.id,
     required this.name,
-    required this.classTeacherId,
-    required this.classTeacherName,
+    required this.classFacultyId,
+    required this.classFacultyName,
   });
 
   final int id;
   final String name;
-  final int? classTeacherId;
-  final String? classTeacherName;
+  final int? classFacultyId;
+  final String? classFacultyName;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(
       id: json['id'] as int,
       name: json['name'] as String,
-      classTeacherId: json['class_teacher_id'] as int?,
-      classTeacherName: json['class_teacher_name'] as String?,
+      classFacultyId: json['class_teacher_id'] as int?,
+      classFacultyName: json['class_teacher_name'] as String?,
     );
   }
 }
@@ -642,8 +642,8 @@ class _CountChip extends StatelessWidget {
   }
 }
 
-class _ClassSummaryChip extends StatelessWidget {
-  const _ClassSummaryChip({
+class _CohortSummaryChip extends StatelessWidget {
+  const _CohortSummaryChip({
     required this.label,
     required this.value,
     this.color,
@@ -674,8 +674,8 @@ class _ClassSummaryChip extends StatelessWidget {
   }
 }
 
-class _ClassFilterChip extends StatelessWidget {
-  const _ClassFilterChip({
+class _CohortFilterChip extends StatelessWidget {
+  const _CohortFilterChip({
     required this.label,
     required this.selected,
     required this.onTap,

@@ -75,7 +75,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             .toList();
         _classNames = {
           for (final item in classesJson)
-            (item['id'] as int): (item['name'] as String? ?? 'Class')
+            (item['id'] as int): (item['name'] as String? ?? 'Cohort')
         };
         _loading = false;
       });
@@ -91,8 +91,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final className = _profile?.classId == null
-        ? 'No class assigned'
-        : _classNames[_profile!.classId] ?? 'Class ${_profile!.classId}';
+        ? 'No cohort assigned'
+        : _classNames[_profile!.classId] ?? 'Cohort ${_profile!.classId}';
     final pendingAssignments = _assignments
         .where((assignment) => assignment.status == 'pending' || assignment.status == 'missing')
         .length;
@@ -195,7 +195,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           AppCard(
             child: _schedule.isEmpty
                 ? Text(
-                    _loading ? 'Loading schedule...' : 'No classes scheduled today.',
+                    _loading ? 'Loading schedule...' : 'No sessions scheduled today.',
                     style: Theme.of(context).textTheme.bodySmall,
                   )
                 : Column(
@@ -549,7 +549,7 @@ class _ScheduleItem {
 
   factory _ScheduleItem.fromJson(Map<String, dynamic> json) {
     return _ScheduleItem(
-      subject: json['subject'] as String? ?? 'Class',
+      subject: json['subject'] as String? ?? 'Cohort',
       startTime: json['start_time'] as String? ?? '--:--',
       endTime: json['end_time'] as String? ?? '--:--',
     );

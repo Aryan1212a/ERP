@@ -7,10 +7,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    APP_NAME: str = "School ERP"
+    APP_NAME: str = "College ERP"
     APP_ENV: str = "development"
     LOG_LEVEL: str = "INFO"
-    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/school_erp"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/college_erp"
     JWT_SECRET: str = "CHANGE_ME"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60

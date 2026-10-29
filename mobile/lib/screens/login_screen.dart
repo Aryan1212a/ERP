@@ -280,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           Text(
-                            'Run school operations with clarity.',
+                            'Run college operations with clarity.',
                             style: theme.textTheme.titleLarge?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -344,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Text(
-                  'Run school operations with clarity.',
+                  'Run college operations with clarity.',
                   style: headingStyle?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

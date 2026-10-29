@@ -498,7 +498,7 @@ class _AttendanceRecordCard extends StatelessWidget {
     final classId = item['class_id']?.toString();
     final subtitle = classId == null || classId.isEmpty
         ? 'Attendance entry recorded'
-        : 'Class $classId';
+        : 'Cohort $classId';
     final icon = switch (status.toLowerCase()) {
       'present' => Icons.check_circle_rounded,
       'absent' => Icons.cancel_rounded,

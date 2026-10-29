@@ -9,7 +9,7 @@ import '../ui/app_widgets.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     super.key,
-    this.title = 'School ERP Dashboard',
+    this.title = 'College ERP Dashboard',
     this.subtitle = 'Welcome back',
     this.roleTag = 'Student view',
     this.roleColor = AppColors.primary,
@@ -568,7 +568,7 @@ class _QuickActions extends StatelessWidget {
       ),
       DashboardActionData(
         label: 'Timetable',
-        subtitle: 'Class schedule',
+        subtitle: 'Cohort schedule',
         icon: Icons.event_available_rounded,
         color: AppColors.primary,
         onTap: onTimetable,

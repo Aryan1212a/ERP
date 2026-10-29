@@ -16,38 +16,38 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
   final _email = TextEditingController();
   String _role = 'student';
   bool _loading = false;
-  bool _loadingClasses = true;
+  bool _loadingCohorts = true;
   String? _error;
-  List<_ClassItem> _classes = [];
-  int? _selectedClassId;
+  List<_CohortItem> _classes = [];
+  int? _selectedCohortId;
 
   @override
   void initState() {
     super.initState();
-    _loadClasses();
+    _loadCohorts();
   }
 
-  Future<void> _loadClasses() async {
+  Future<void> _loadCohorts() async {
     setState(() {
-      _loadingClasses = true;
+      _loadingCohorts = true;
       _error = null;
     });
     try {
       final res = await Services.api.get('/api/v1/classes');
       if (res.statusCode != 200) {
-        throw Exception('Failed to load classes');
+        throw Exception('Failed to load cohorts');
       }
       final json = jsonDecode(res.body) as List<dynamic>;
-      final classes = json.map((e) => _ClassItem.fromJson(e)).toList();
+      final classes = json.map((e) => _CohortItem.fromJson(e)).toList();
       setState(() {
         _classes = classes;
-        _selectedClassId = classes.isNotEmpty ? classes.first.id : null;
-        _loadingClasses = false;
+        _selectedCohortId = classes.isNotEmpty ? classes.first.id : null;
+        _loadingCohorts = false;
       });
     } catch (e) {
       setState(() {
-        _loadingClasses = false;
-        _error = 'Unable to load classes';
+        _loadingCohorts = false;
+        _error = 'Unable to load cohorts';
       });
     }
   }
@@ -60,8 +60,8 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
       'role': _role,
       'full_name': _fullName.text.trim(),
       'email': _email.text.trim(),
-      if (_role == 'student' || (_role == 'teacher' && _selectedClassId != null))
-        'class_id': _selectedClassId,
+      if (_role == 'student' || (_role == 'teacher' && _selectedCohortId != null))
+        'class_id': _selectedCohortId,
     };
 
     final res = await Services.api.post('/api/v1/admin/users', body);
@@ -124,7 +124,7 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                         initialValue: _role,
                         items: const [
                           DropdownMenuItem(value: 'student', child: Text('Student')),
-                          DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
+                          DropdownMenuItem(value: 'teacher', child: Text('Faculty')),
                         ],
                         onChanged: (value) => setState(() => _role = value ?? 'student'),
                         decoration: const InputDecoration(
@@ -134,36 +134,36 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
                       ),
                       const SizedBox(height: 12),
                       if (_role == 'student' || _role == 'teacher')
-                        _loadingClasses
+                        _loadingCohorts
                             ? const LinearProgressIndicator()
                             : _error != null
                                 ? Row(
                                     children: [
                                       Expanded(child: Text(_error!)),
                                       TextButton(
-                                        onPressed: _loadClasses,
+                                        onPressed: _loadCohorts,
                                         child: const Text('Retry'),
                                       ),
                                     ],
                                   )
                                 : DropdownButtonFormField<int>(
-                                    initialValue: _selectedClassId,
+                                    initialValue: _selectedCohortId,
                                     items: _classes
                                         .map((c) => DropdownMenuItem(
                                               value: c.id,
                                               child: Text(c.name),
                                             ))
                                         .toList(),
-                                    onChanged: (value) => setState(() => _selectedClassId = value),
+                                    onChanged: (value) => setState(() => _selectedCohortId = value),
                                     decoration: InputDecoration(
-                                      labelText: _role == 'student' ? 'Class' : 'Assigned Class',
+                                      labelText: _role == 'student' ? 'Cohort' : 'Assigned Cohort',
                                       helperText: _role == 'teacher'
-                                          ? 'Optional: assign the teacher to a class now'
+                                          ? 'Optional: assign the faculty member to a cohort now'
                                           : null,
                                       border: const OutlineInputBorder(),
                                     ),
                                     validator: (v) =>
-                                        _role == 'student' && v == null ? 'Class required' : null,
+                                        _role == 'student' && v == null ? 'Cohort required' : null,
                                   ),
                       const SizedBox(height: 20),
                       FilledButton(
@@ -185,13 +185,13 @@ class _AdminCreateUserScreenState extends State<AdminCreateUserScreen> {
   }
 }
 
-class _ClassItem {
-  _ClassItem({required this.id, required this.name});
+class _CohortItem {
+  _CohortItem({required this.id, required this.name});
   final int id;
   final String name;
 
-  factory _ClassItem.fromJson(Map<String, dynamic> json) {
-    return _ClassItem(
+  factory _CohortItem.fromJson(Map<String, dynamic> json) {
+    return _CohortItem(
       id: json['id'] as int,
       name: json['name'] as String,
     );
